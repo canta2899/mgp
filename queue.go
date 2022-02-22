@@ -1,7 +1,10 @@
 package main
 
+/* Implements a thread safe queue using channels */
+
 import "errors"
 
+// Interface is used in order to use different types
 type Queue struct {
 	maxc  int
 	queue chan interface{}

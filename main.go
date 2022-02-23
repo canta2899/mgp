@@ -1,13 +1,71 @@
+/**
+
+    Multigrep, a tool for efficient recursive search
+    of file content using regexps and goroutines
+
+    Usage
+    =====
+
+    mgrep [pattern] [startpath]
+
+    Flags
+    =====
+        • -w  (degree of parallelism [default 8])
+        • -x  (directories to be excluded)
+
+    Example
+    =======
+
+    mgrep -w 20 -x ./docs/w1 -x ./docs/w2 ^.+end$ ./docs/
+
+**/
+
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"sync"
 )
+
+type ExcludedDirs []string
+
+func (ed *ExcludedDirs) String() string {
+	return fmt.Sprintln(*ed)
+}
+
+func (ed *ExcludedDirs) Set(s string) error {
+	fullpath, err := filepath.Abs(s)
+	if err != nil {
+		return err
+	}
+	*ed = append(*ed, fullpath)
+	return nil
+}
+
+type Parameters struct {
+	startpath string
+	pattern   string
+	workers   int
+	excluded  ExcludedDirs
+}
+
+func ParseArgs() *Parameters {
+	var exc ExcludedDirs
+	w := flag.Int("w", 8, "degree of parallelism")
+	flag.Var(&exc, "x", "excluded paths")
+
+	flag.Parse()
+
+	pattern := flag.Arg(0)
+	startpath := flag.Arg(1)
+
+	return &Parameters{workers: *w, excluded: exc, startpath: startpath, pattern: pattern}
+}
 
 func handler(c <-chan interface{}, wg *sync.WaitGroup, r *regexp.Regexp) {
 	defer wg.Done()
@@ -25,13 +83,14 @@ func handler(c <-chan interface{}, wg *sync.WaitGroup, r *regexp.Regexp) {
 		fi, err := os.Stat(filepath)
 
 		if err != nil || !fi.Mode().IsRegular() {
+			// Skips
 			continue
 		}
 
 		filedata, err := os.ReadFile(filepath)
 
 		if err != nil {
-			fmt.Println(err.Error())
+			// Skips
 			continue
 		}
 
@@ -47,27 +106,25 @@ func main() {
 	// main function wait for the other coroutines
 	var wg sync.WaitGroup
 
-	startpath := os.Args[1]
-	pattern := os.Args[2]
-	workers, _ := strconv.Atoi(os.Args[3])
+	params := ParseArgs()
 
-	r, _ := regexp.Compile(pattern)
+	r, _ := regexp.Compile(params.pattern)
 
 	files := []string{}
 
-	err := filepath.Walk(startpath,
-		func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(params.startpath,
+		func(pathname string, info os.FileInfo, err error) error {
 
 			// Should exlude some paths if specified
-			// if isin(path, x) {
-			// 	return filepath.SkipDir
-			// }
+			if isin(path.Dir(pathname), params.excluded) {
+				return filepath.SkipDir
+			}
 
 			if err != nil {
 				return err
 			}
 
-			files = append(files, path)
+			files = append(files, pathname)
 
 			return nil
 		})
@@ -86,9 +143,9 @@ func main() {
 		c <- p
 	}
 
-	wg.Add(workers)
+	wg.Add(params.workers)
 
-	for i := 0; i < workers; i++ {
+	for i := 0; i < params.workers; i++ {
 		go handler(c, &wg, r)
 	}
 
@@ -96,7 +153,7 @@ func main() {
 }
 
 // Utility that checks whether el is in list
-func isin(el string, list []string) bool {
+func isin(el string, list ExcludedDirs) bool {
 	for _, entry := range list {
 		if el == entry {
 			return true

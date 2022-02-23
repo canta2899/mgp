@@ -32,6 +32,25 @@ import (
     "sync"
 )
 
+type SyncControl struct {
+    done bool
+    mutex sync.Mutex
+}
+
+func (s *SyncControl) get() bool {
+    defer s.mutex.Unlock()
+    s.mutex.Lock()
+    return s.done 
+}
+
+func (s *SyncControl) set(val bool) {
+    defer s.mutex.Unlock() 
+    s.mutex.Lock()
+    s.done = val
+}
+
+var scanningdone *SyncControl = &SyncControl{done: false}
+
 type ExcludedDirs []string
 
 func (ed *ExcludedDirs) String() string {
@@ -72,7 +91,7 @@ func handler(c <-chan interface{}, wg *sync.WaitGroup, r *regexp.Regexp) {
 
     for {
 
-        if len(c) == 0 {
+        if len(c) == 0 && scanningdone.get() {
             return
         }
 
@@ -110,7 +129,13 @@ func main() {
 
     r, _ := regexp.Compile(params.pattern)
 
-    files := []string{}
+    c := make(chan interface{}, 1000)
+
+    wg.Add(params.workers)
+
+    for i := 0; i < params.workers; i++ {
+        go handler(c, &wg, r)
+    }
 
     err := filepath.Walk(params.startpath,
         func(pathname string, info os.FileInfo, err error) error {
@@ -123,8 +148,8 @@ func main() {
             if err != nil {
                 return err
             }
-
-            files = append(files, pathname)
+            
+                c <- pathname
 
             return nil
         })
@@ -137,17 +162,8 @@ func main() {
     // safe queue that allows multiple consumers to
     // "dequeue" each path and process the content of
     // the referred file
-    c := make(chan interface{}, len(files))
 
-    for _, p := range files {
-        c <- p
-    }
-
-    wg.Add(params.workers)
-
-    for i := 0; i < params.workers; i++ {
-        go handler(c, &wg, r)
-    }
+    scanningdone.set(true)
 
     wg.Wait()
 }

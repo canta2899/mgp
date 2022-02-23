@@ -9,7 +9,7 @@ import (
 	"sync"
 )
 
-func handler(c <-chan string, wg *sync.WaitGroup, r *regexp.Regexp) {
+func handler(c <-chan interface{}, wg *sync.WaitGroup, r *regexp.Regexp) {
 	defer wg.Done()
 
 	for {
@@ -20,27 +20,31 @@ func handler(c <-chan string, wg *sync.WaitGroup, r *regexp.Regexp) {
 
 		next := <-c
 
-		fi, err := os.Stat(next)
+		filepath := next.(string) // type assertion
+
+		fi, err := os.Stat(filepath)
 
 		if err != nil || !fi.Mode().IsRegular() {
 			continue
 		}
 
-		filedata, err := os.ReadFile(next)
+		filedata, err := os.ReadFile(filepath)
 
 		if err != nil {
 			fmt.Println(err.Error())
 			continue
-		} else {
-			if r.Match(filedata) {
-				fmt.Println(next)
-			}
+		}
+
+		if r.Match(filedata) {
+			fmt.Println(next)
 		}
 	}
 }
 
 func main() {
 
+	// Allows synchronization in order to let the
+	// main function wait for the other coroutines
 	var wg sync.WaitGroup
 
 	startpath := os.Args[1]
@@ -49,12 +53,12 @@ func main() {
 
 	r, _ := regexp.Compile(pattern)
 
-	// x := os.Args[4:]
 	files := []string{}
 
 	err := filepath.Walk(startpath,
 		func(path string, info os.FileInfo, err error) error {
 
+			// Should exlude some paths if specified
 			// if isin(path, x) {
 			// 	return filepath.SkipDir
 			// }
@@ -72,24 +76,29 @@ func main() {
 		panic(err.Error())
 	}
 
-	c := make(chan string, len(files)+1)
+	// Using a channel in order to implement a thread
+	// safe queue that allows multiple consumers to
+	// "dequeue" each path and process the content of
+	// the referred file
+	c := make(chan interface{}, len(files))
 
 	for _, p := range files {
 		c <- p
 	}
 
 	wg.Add(workers)
+
 	for i := 0; i < workers; i++ {
 		go handler(c, &wg, r)
 	}
-	close(c)
 
 	wg.Wait()
 }
 
-func isin(e string, l []string) bool {
-	for _, el := range l {
-		if el == e {
+// Utility that checks whether el is in list
+func isin(el string, list []string) bool {
+	for _, entry := range list {
+		if el == entry {
 			return true
 		}
 	}

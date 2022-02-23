@@ -22,6 +22,7 @@
 
 package main
 
+
 import (
     "flag"
     "fmt"
@@ -31,6 +32,7 @@ import (
     "regexp"
     "sync"
 )
+
 
 type SyncControl struct {
     done bool
@@ -49,7 +51,6 @@ func (s *SyncControl) set(val bool) {
     s.done = val
 }
 
-var scanningdone *SyncControl = &SyncControl{done: false}
 
 type ExcludedDirs []string
 
@@ -66,6 +67,7 @@ func (ed *ExcludedDirs) Set(s string) error {
     return nil
 }
 
+
 type Parameters struct {
     startpath string
     pattern   string
@@ -73,27 +75,54 @@ type Parameters struct {
     excluded  ExcludedDirs
 }
 
+
 func ParseArgs() *Parameters {
     var exc ExcludedDirs
+
     w := flag.Int("w", 8, "degree of parallelism")
     flag.Var(&exc, "x", "excluded paths")
 
     flag.Parse()
 
-    pattern := flag.Arg(0)
-    startpath := flag.Arg(1)
+    p := flag.Args()
 
-    return &Parameters{workers: *w, excluded: exc, startpath: startpath, pattern: pattern}
+    if len(p) < 2 {
+        PrintUsageGuide()
+        os.Exit(0)
+    }
+
+    return &Parameters{workers: *w, excluded: exc, startpath: p[1], pattern: p[0]}
 }
 
-func handler(c <-chan interface{}, wg *sync.WaitGroup, r *regexp.Regexp) {
+
+func isin(el string, list ExcludedDirs) bool {
+
+    // Utility that checks whether el is in list
+
+    for _, entry := range list {
+        if el == entry {
+            return true
+        }
+    }
+
+    return false
+}
+
+
+func PrintUsageGuide() {
+    msg := `Usage: mgrep [pattern] [path]
+
+    You can use the flags
+        -w for workers
+        -x to exclude paths`
+    fmt.Println(msg)
+}
+
+
+func handler(c <-chan interface{}, wg *sync.WaitGroup, r *regexp.Regexp, control *SyncControl) {
     defer wg.Done()
 
-    for {
-
-        if len(c) == 0 && scanningdone.get() {
-            return
-        }
+    for !(len(c) == 0 && control.get()) {
 
         next := <-c
 
@@ -119,22 +148,24 @@ func handler(c <-chan interface{}, wg *sync.WaitGroup, r *regexp.Regexp) {
     }
 }
 
+
 func main() {
 
     // Allows synchronization in order to let the
     // main function wait for the other coroutines
+    var scanningdone *SyncControl = &SyncControl{done: false}
     var wg sync.WaitGroup
 
     params := ParseArgs()
 
     r, _ := regexp.Compile(params.pattern)
 
-    c := make(chan interface{}, 1000)
+    c := make(chan interface{}, 100)
 
     wg.Add(params.workers)
 
     for i := 0; i < params.workers; i++ {
-        go handler(c, &wg, r)
+        go handler(c, &wg, r, scanningdone)
     }
 
     err := filepath.Walk(params.startpath,
@@ -149,7 +180,10 @@ func main() {
                 return err
             }
             
-                c <- pathname
+            // The channel acts as a queue, the main routine produces
+            // paths that are buffered and consumed by the N workers
+            // that have been previously executed concurrently
+            c <- pathname
 
             return nil
         })
@@ -158,22 +192,12 @@ func main() {
         panic(err.Error())
     }
 
-    // Using a channel in order to implement a thread
-    // safe queue that allows multiple consumers to
-    // "dequeue" each path and process the content of
-    // the referred file
-
+    // States that there are no more path to be pushed on the
+    // channel for synchronization purposes
     scanningdone.set(true)
 
+    // Waits for goroutines to finish
     wg.Wait()
 }
 
-// Utility that checks whether el is in list
-func isin(el string, list ExcludedDirs) bool {
-    for _, entry := range list {
-        if el == entry {
-            return true
-        }
-    }
-    return false
-}
+

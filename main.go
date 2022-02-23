@@ -4,38 +4,60 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"sync"
 )
 
-func handler(q *Queue, wid int, wg *sync.WaitGroup) {
+func handler(c <-chan string, wg *sync.WaitGroup, r *regexp.Regexp) {
 	defer wg.Done()
 
 	for {
-		next, err := q.Dequeue()
 
-		if err != nil {
+		if len(c) == 0 {
 			return
 		}
 
-		fmt.Println("Processing path:", next)
+		next := <-c
+
+		fi, err := os.Stat(next)
+
+		if err != nil || !fi.Mode().IsRegular() {
+			continue
+		}
+
+		filedata, err := os.ReadFile(next)
+
+		if err != nil {
+			fmt.Println(err.Error())
+			continue
+		} else {
+			if r.Match(filedata) {
+				fmt.Println(next)
+			}
+		}
 	}
 }
 
 func main() {
+
 	var wg sync.WaitGroup
 
 	startpath := os.Args[1]
-	workers, _ := strconv.Atoi(os.Args[2])
-	x := os.Args[3:]
+	pattern := os.Args[2]
+	workers, _ := strconv.Atoi(os.Args[3])
+
+	r, _ := regexp.Compile(pattern)
+
+	// x := os.Args[4:]
 	files := []string{}
 
 	err := filepath.Walk(startpath,
 		func(path string, info os.FileInfo, err error) error {
 
-			if isin(path, x) {
-				return filepath.SkipDir
-			}
+			// if isin(path, x) {
+			// 	return filepath.SkipDir
+			// }
 
 			if err != nil {
 				return err
@@ -50,21 +72,19 @@ func main() {
 		panic(err.Error())
 	}
 
-	q := NewQueue(len(files))
+	c := make(chan string, len(files)+1)
 
 	for _, p := range files {
-		q.Enqueue(p)
+		c <- p
 	}
 
-	StartWorkers(q, &wg, workers)
+	wg.Add(workers)
+	for i := 0; i < workers; i++ {
+		go handler(c, &wg, r)
+	}
+	close(c)
+
 	wg.Wait()
-}
-
-func StartWorkers(q *Queue, wg *sync.WaitGroup, count int) {
-	for i := 0; i < count; i++ {
-		wg.Add(1)
-		go handler(q, i, wg)
-	}
 }
 
 func isin(e string, l []string) bool {

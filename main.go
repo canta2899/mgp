@@ -124,7 +124,11 @@ func handler(c <-chan interface{}, wg *sync.WaitGroup, r *regexp.Regexp, control
 
     for !(len(c) == 0 && control.get()) {
 
-        next := <-c
+        next, ok := <-c
+
+        if !ok {
+            return
+        }
 
         filepath := next.(string) // type assertion
 
@@ -195,6 +199,7 @@ func main() {
     // States that there are no more path to be pushed on the
     // channel for synchronization purposes
     scanningdone.set(true)
+    close(c)
 
     // Waits for goroutines to finish
     wg.Wait()

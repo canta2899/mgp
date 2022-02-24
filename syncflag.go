@@ -4,23 +4,23 @@ package main
 
 import "sync"
 
-type Flag struct {
+type SyncFlag struct {
     done bool
     mutex sync.Mutex
 }
 
-func (f *Flag) Get() bool {
+func (f *SyncFlag) Get() bool {
     defer f.mutex.Unlock()
     f.mutex.Lock()
     return f.done 
 }
 
-func (f *Flag) Set(val bool) {
+func (f *SyncFlag) Set(val bool) {
     defer f.mutex.Unlock() 
     f.mutex.Lock()
     f.done = val
 }
 
-func NewFlag(initval bool) *Flag {
-    return &Flag{done: initval}
+func NewFlag(initval bool) *SyncFlag {
+    return &SyncFlag{done: initval}
 }

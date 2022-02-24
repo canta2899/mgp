@@ -23,10 +23,8 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"sync"
@@ -34,61 +32,20 @@ import (
 )
 
 
-type Parameters struct {
-    startpath string
-    pattern   string
-    workers   int
-    excluded  ExcludedDirs
-    ignored   ExcludedDirs
-}
+func isin(el string, list []string) bool {
 
-
-func ParseArgs() *Parameters {
-    var exc ExcludedDirs
-    var ignored ExcludedDirs
-
-    w := flag.Int("w", 4, "degree of parallelism")
-    flag.Var(&exc, "exclude", "excluded paths")
-    flag.Var(&ignored, "ignore", "ignored folders everywhere in the path")
-
-    flag.Parse()
-
-    p := flag.Args()
-
-    if len(p) < 2 {
-        PrintUsageGuide()
-        os.Exit(0)
-    }
-
-    return &Parameters{workers: *w, excluded: exc, startpath: p[1], pattern: p[0], ignored: ignored}
-}
-
-
-func isin(el string, list ExcludedDirs) bool {
-
-    // Utility that checks whether el is in list
+    // Utility that checks if file/dir should be skipped
 
     for _, entry := range list {
-        if p, err := filepath.Abs(entry); err == nil && p == el {
+        m, _ := filepath.Match(filepath.Clean(entry), filepath.Clean(el))
+        n, _ := filepath.Glob(el + "/"+ entry)
+        if m || len(n) > 0 {
             return true
         }
     }
 
     return false
 }
-
-func isin_base(el string, list ExcludedDirs) bool {
-    elname := path.Base(el)
-
-    for _, entry := range list {
-        if entry == elname {
-            return true
-        }
-    }
-
-    return false
-}
-
 
 func PrintUsageGuide() {
     msg := `Usage: mgrep [pattern] [path]
@@ -100,7 +57,7 @@ func PrintUsageGuide() {
 }
 
 
-func handler(q *Queue, wg *sync.WaitGroup, r *regexp.Regexp, control *Flag) {
+func handler(q *Queue, wg *sync.WaitGroup, r *regexp.Regexp, control *SyncFlag) {
     defer wg.Done()
 
     for {
@@ -145,19 +102,24 @@ func main() {
 
     var wg sync.WaitGroup
 
-    params := ParseArgs()
+    params, err := ParseArgs()
 
-    r, _ := regexp.Compile(params.pattern)
+    if err != nil {
+        fmt.Println(err.Error())
+        os.Exit(1)
+    }
+
+    r, _ := regexp.Compile(*params.pattern)
 
     q := NewQueue()
 
-    wg.Add(params.workers)
+    wg.Add(*params.workers)
 
-    for i := 0; i < params.workers; i++ {
+    for i := 0; i < *params.workers; i++ {
         go handler(q, &wg, r, control)
     }
 
-    err := filepath.Walk(params.startpath,
+    err = filepath.Walk(*params.startpath,
         func(pathname string, info os.FileInfo, err error) error {
 
             if err != nil {
@@ -165,7 +127,7 @@ func main() {
             }
 
             // Should exlude some paths if specified
-            if isin(pathname, params.excluded) || isin_base(pathname, params.ignored) { 
+            if isin(pathname, *params.exclude) { 
                 return filepath.SkipDir
             }
             

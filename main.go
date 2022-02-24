@@ -34,40 +34,6 @@ import (
 )
 
 
-type SyncControl struct {
-    done bool
-    mutex sync.Mutex
-}
-
-func (s *SyncControl) get() bool {
-    defer s.mutex.Unlock()
-    s.mutex.Lock()
-    return s.done 
-}
-
-func (s *SyncControl) set(val bool) {
-    defer s.mutex.Unlock() 
-    s.mutex.Lock()
-    s.done = val
-}
-
-
-type ExcludedDirs []string
-
-func (ed *ExcludedDirs) String() string {
-    return fmt.Sprintln(*ed)
-}
-
-func (ed *ExcludedDirs) Set(s string) error {
-    fullpath, err := filepath.Abs(s)
-    if err != nil {
-        return err
-    }
-    *ed = append(*ed, fullpath)
-    return nil
-}
-
-
 type Parameters struct {
     startpath string
     pattern   string
@@ -119,7 +85,7 @@ func PrintUsageGuide() {
 }
 
 
-func handler(q *Queue, wg *sync.WaitGroup, r *regexp.Regexp, control *SyncControl) {
+func handler(q *Queue, wg *sync.WaitGroup, r *regexp.Regexp, control *Flag) {
     defer wg.Done()
 
     for {
@@ -128,7 +94,7 @@ func handler(q *Queue, wg *sync.WaitGroup, r *regexp.Regexp, control *SyncContro
 
         if err != nil {
 
-            if control.get() {
+            if control.Get() {
                 return
             }
 
@@ -161,7 +127,8 @@ func main() {
 
     // Allows synchronization in order to let the
     // main function wait for the other goroutines
-    var scanningdone *SyncControl = &SyncControl{done: false}
+    control := NewFlag(false)
+
     var wg sync.WaitGroup
 
     params := ParseArgs()
@@ -173,7 +140,7 @@ func main() {
     wg.Add(params.workers)
 
     for i := 0; i < params.workers; i++ {
-        go handler(q, &wg, r, scanningdone)
+        go handler(q, &wg, r, control)
     }
 
     err := filepath.Walk(params.startpath,
@@ -201,10 +168,9 @@ func main() {
 
     // States that there are no more path to be
     // enqueued for synchronization purposes
-    scanningdone.set(true)
+    control.Set(true)
 
     // Waits for goroutines to finish
     wg.Wait()
 }
-
 

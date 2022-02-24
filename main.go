@@ -22,15 +22,15 @@
 
 package main
 
-
 import (
-    "flag"
-    "fmt"
-    "os"
-    "path"
-    "path/filepath"
-    "regexp"
-    "sync"
+	"flag"
+    "time"
+	"fmt"
+	"os"
+	"path"
+	"path/filepath"
+	"regexp"
+	"sync"
 )
 
 
@@ -119,18 +119,22 @@ func PrintUsageGuide() {
 }
 
 
-func handler(c <-chan interface{}, wg *sync.WaitGroup, r *regexp.Regexp, control *SyncControl) {
+func handler(q *Queue, wg *sync.WaitGroup, r *regexp.Regexp, control *SyncControl) {
     defer wg.Done()
 
-    for !(len(c) == 0 && control.get()) {
+    for {
 
-        next, ok := <-c
+        filepath, err := q.Dequeue()
 
-        if !ok {
-            return
+        if err != nil {
+
+            if control.get() {
+                return
+            }
+
+            time.Sleep(100 * time.Nanosecond)
         }
 
-        filepath := next.(string) // type assertion
 
         fi, err := os.Stat(filepath)
 
@@ -147,7 +151,7 @@ func handler(c <-chan interface{}, wg *sync.WaitGroup, r *regexp.Regexp, control
         }
 
         if r.Match(filedata) {
-            fmt.Println(next)
+            fmt.Println(filepath)
         }
     }
 }
@@ -156,7 +160,7 @@ func handler(c <-chan interface{}, wg *sync.WaitGroup, r *regexp.Regexp, control
 func main() {
 
     // Allows synchronization in order to let the
-    // main function wait for the other coroutines
+    // main function wait for the other goroutines
     var scanningdone *SyncControl = &SyncControl{done: false}
     var wg sync.WaitGroup
 
@@ -164,12 +168,12 @@ func main() {
 
     r, _ := regexp.Compile(params.pattern)
 
-    c := make(chan interface{}, 100)
+    q := NewQueue()
 
     wg.Add(params.workers)
 
     for i := 0; i < params.workers; i++ {
-        go handler(c, &wg, r, scanningdone)
+        go handler(q, &wg, r, scanningdone)
     }
 
     err := filepath.Walk(params.startpath,
@@ -184,10 +188,9 @@ func main() {
                 return err
             }
             
-            // The channel acts as a queue, the main routine produces
-            // paths that are buffered and consumed by the N workers
-            // that have been previously executed concurrently
-            c <- pathname
+            // The main routine produces paths that are buffered 
+            // and consumed by the N workers 
+            q.Enqueue(pathname)
 
             return nil
         })
@@ -196,10 +199,9 @@ func main() {
         panic(err.Error())
     }
 
-    // States that there are no more path to be pushed on the
-    // channel for synchronization purposes
+    // States that there are no more path to be
+    // enqueued for synchronization purposes
     scanningdone.set(true)
-    close(c)
 
     // Waits for goroutines to finish
     wg.Wait()

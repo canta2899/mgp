@@ -2,7 +2,6 @@ package main
 
 import (
     "fmt"
-    "path/filepath"
 )
 
 type ExcludedDirs []string
@@ -12,11 +11,7 @@ func (ed *ExcludedDirs) String() string {
 }
 
 func (ed *ExcludedDirs) Set(s string) error {
-    fullpath, err := filepath.Abs(s)
-    if err != nil {
-        return err
-    }
-    *ed = append(*ed, fullpath)
+    *ed = append(*ed, s)
     return nil
 }
 

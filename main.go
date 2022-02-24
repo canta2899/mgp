@@ -24,13 +24,13 @@ package main
 
 import (
 	"flag"
-    "time"
 	"fmt"
 	"os"
 	"path"
 	"path/filepath"
 	"regexp"
 	"sync"
+	"time"
 )
 
 
@@ -39,14 +39,17 @@ type Parameters struct {
     pattern   string
     workers   int
     excluded  ExcludedDirs
+    ignored   ExcludedDirs
 }
 
 
 func ParseArgs() *Parameters {
     var exc ExcludedDirs
+    var ignored ExcludedDirs
 
-    w := flag.Int("w", 8, "degree of parallelism")
-    flag.Var(&exc, "x", "excluded paths")
+    w := flag.Int("w", 4, "degree of parallelism")
+    flag.Var(&exc, "exclude", "excluded paths")
+    flag.Var(&ignored, "ignore", "ignored folders everywhere in the path")
 
     flag.Parse()
 
@@ -57,7 +60,7 @@ func ParseArgs() *Parameters {
         os.Exit(0)
     }
 
-    return &Parameters{workers: *w, excluded: exc, startpath: p[1], pattern: p[0]}
+    return &Parameters{workers: *w, excluded: exc, startpath: p[1], pattern: p[0], ignored: ignored}
 }
 
 
@@ -66,7 +69,19 @@ func isin(el string, list ExcludedDirs) bool {
     // Utility that checks whether el is in list
 
     for _, entry := range list {
-        if el == entry {
+        if p, err := filepath.Abs(entry); err == nil && p == el {
+            return true
+        }
+    }
+
+    return false
+}
+
+func isin_base(el string, list ExcludedDirs) bool {
+    elname := path.Base(el)
+
+    for _, entry := range list {
+        if entry == elname {
             return true
         }
     }
@@ -122,7 +137,6 @@ func handler(q *Queue, wg *sync.WaitGroup, r *regexp.Regexp, control *Flag) {
     }
 }
 
-
 func main() {
 
     // Allows synchronization in order to let the
@@ -146,19 +160,18 @@ func main() {
     err := filepath.Walk(params.startpath,
         func(pathname string, info os.FileInfo, err error) error {
 
-            // Should exlude some paths if specified
-            if isin(path.Dir(pathname), params.excluded) {
-                return filepath.SkipDir
-            }
-
             if err != nil {
                 return err
+            }
+
+            // Should exlude some paths if specified
+            if isin(pathname, params.excluded) || isin_base(pathname, params.ignored) { 
+                return filepath.SkipDir
             }
             
             // The main routine produces paths that are buffered 
             // and consumed by the N workers 
             q.Enqueue(pathname)
-
             return nil
         })
 

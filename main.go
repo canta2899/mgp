@@ -1,23 +1,13 @@
 /**
+    Multigrep
+    =========
 
-    Multigrep, a tool for efficient recursive search
-    of file content using regexps and goroutines
+    A CLI tool that allows faster recursive search of files
+    whose content matches the given pattern.
 
-    Usage
-    ======
+    It returns the equivalent of grep -E -r -l "pattern" "path".
 
-    mgrep [pattern] [startpath]
-
-    Flags
-    ======
-        • -w  (degree of parallelism [default 8])
-        • -x  (directories to be excluded)
-
-    Example
-    =======
-
-    mgrep -w 20 -x ./docs/w1 -x ./docs/w2 ^.+end$ ./docs/
-
+    Run multigrep --help for a brief usage guide
 **/
 
 package main
@@ -28,7 +18,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"sync"
-	"time"
 )
 
 func GetMatches(patterns []string) []string {
@@ -42,7 +31,7 @@ func GetMatches(patterns []string) []string {
     return matches 
 }
 
-func handler(q *Queue, wg *sync.WaitGroup, r *regexp.Regexp, control *SyncFlag) {
+func handler(q *Queue, wg *sync.WaitGroup, r *regexp.Regexp) {
     defer wg.Done()
 
     for {
@@ -50,26 +39,19 @@ func handler(q *Queue, wg *sync.WaitGroup, r *regexp.Regexp, control *SyncFlag) 
         filepath, err := q.Dequeue()
 
         if err != nil {
-
-            if control.Get() {
-                return
-            }
-
-            time.Sleep(100 * time.Nanosecond)
+            return 
         }
 
         fi, err := os.Stat(filepath)
 
         if err != nil || !fi.Mode().IsRegular() {
-            // Skips
-            continue
+            continue // Skips
         }
 
         filedata, err := os.ReadFile(filepath)
 
         if err != nil {
-            // Skips
-            continue
+            continue // Skips
         }
 
         if r.Match(filedata) {
@@ -78,52 +60,7 @@ func handler(q *Queue, wg *sync.WaitGroup, r *regexp.Regexp, control *SyncFlag) 
     }
 }
 
-func main() {
-    var wg sync.WaitGroup
-
-    // Allows synchronization in order to let the
-    // main function wait for the other goroutines
-    control := NewFlag(false)
-
-    params, err := ParseArgs()
-    if err != nil {
-        fmt.Println(err.Error())
-        os.Exit(1)
-    }
-
-    r, _ := regexp.Compile(*params.pattern)
-    matches := GetMatches(*params.exclude)
-
-    q := NewQueue()
-
-    wg.Add(*params.workers)
-    for i := 0; i < *params.workers; i++ {
-        go handler(q, &wg, r, control)
-    }
-
-    err = filepath.Walk(*params.startpath,
-        func(pathname string, info os.FileInfo, err error) error {
-
-            if err != nil {
-                return err
-            }
-
-            return Process(&info, pathname, q, matches)
-        })
-
-    if err != nil {
-        panic(err.Error())
-    }
-
-    // States that there are no more path to be
-    // enqueued for synchronization purposes
-    control.Set(true)
-
-    // Waits for goroutines to finish
-    wg.Wait()
-}
-
-func Process(info *os.FileInfo, pathname string, q *Queue, excludes []string) error {
+func ProcessPath(info *os.FileInfo, pathname string, q *Queue, excludes []string) error {
     isdir := (*info).IsDir()
 
     for _, n := range excludes {
@@ -144,3 +81,49 @@ func Process(info *os.FileInfo, pathname string, q *Queue, excludes []string) er
 
     return nil
 }
+
+func handle(err error) {
+    if err != nil {
+        panic(err)
+    }
+}
+
+func main() {
+    var wg sync.WaitGroup
+
+    params, err := ParseArgs()
+
+    handle(err)
+
+    r, _ := regexp.Compile(*params.pattern)
+    matches := GetMatches(*params.exclude)
+
+    q := NewQueue()
+
+    wg.Add(*params.workers)
+    for i := 0; i < *params.workers; i++ {
+        go handler(q, &wg, r)
+    }
+
+    err = filepath.Walk(*params.startpath,
+        func(pathname string, info os.FileInfo, err error) error {
+
+            if err != nil {
+                return err
+            }
+
+            // Processes path in search of matches with the given
+            // pattern or the folders that excluded folders
+            return ProcessPath(&info, pathname, q, matches)
+        })
+
+    // Panic if issues occour while traversing path
+    handle(err)
+
+    // Closes the queue in order to sync with goroutines
+    q.Done()
+
+    // Waits for goroutines to finish
+    wg.Wait()
+}
+

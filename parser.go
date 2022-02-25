@@ -37,7 +37,7 @@ func ParseArgs() (*Parameters, error) {
     params.exclude = parser.StringList("e", "exclude", &argparse.Options{
         Help: "Excluded files or directories",
         Required: false,
-        Default: []string{},
+        Default: []string{"*/.bzr","*/CVS","*/.git","*/.hg","*/.svn","*/.idea","*/.tox"},
     })
 
     if err := parser.Parse(os.Args); err != nil {

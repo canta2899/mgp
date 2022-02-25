@@ -1,8 +1,8 @@
 package main
 
 import (
-    "sync"
-    "errors"
+	"errors"
+	"sync"
 )
 
 type node struct {
@@ -13,14 +13,15 @@ type node struct {
 
 type Queue struct {
     mutex sync.Mutex
+    cond *sync.Cond
     head *node
     tail *node
+    closed bool
 }
 
 func (q *Queue) Enqueue(value string) {
-    defer q.mutex.Unlock()
-
     q.mutex.Lock()
+    defer q.mutex.Unlock()
     
     if q.head == nil {
         n := &node{value: value}
@@ -32,6 +33,7 @@ func (q *Queue) Enqueue(value string) {
         q.tail = n
     }
 
+    q.cond.Signal()
 }
 
 func (q *Queue) Dequeue() (string, error) {
@@ -39,10 +41,14 @@ func (q *Queue) Dequeue() (string, error) {
 
     q.mutex.Lock()
 
-    if q.head == nil {
-        return "", errors.New("Empty list")
+    for q.head == nil && !q.closed {
+        q.cond.Wait()
     }
 
+    if q.head == nil {
+        return "", errors.New("Queue was closed")
+    }
+ 
     n := q.head.value
 
     if (q.head == q.tail)  {
@@ -56,7 +62,14 @@ func (q *Queue) Dequeue() (string, error) {
     return n, nil
 }
 
+func (q *Queue) Done() {
+    q.closed = true 
+    q.cond.Broadcast()
+}
+
 
 func NewQueue() *Queue {
-    return &Queue{}
+    q := &Queue{closed: false}
+    q.cond = sync.NewCond(&q.mutex)
+    return q
 }

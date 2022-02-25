@@ -35,7 +35,7 @@ func ParseArgs() (*Parameters, error) {
     })
 
     params.exclude = parser.StringList("e", "exclude", &argparse.Options{
-        Help: "Path that will be excluded (including subpaths)",
+        Help: "Excluded files or directories",
         Required: false,
         Default: []string{},
     })

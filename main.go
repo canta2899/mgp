@@ -31,31 +31,16 @@ import (
 	"time"
 )
 
+func GetMatches(patterns []string) []string {
+    matches := []string{}
 
-func isin(el string, list []string) bool {
-
-    // Utility that checks if file/dir should be skipped
-
-    for _, entry := range list {
-        m, _ := filepath.Match(filepath.Clean(entry), filepath.Clean(el))
-        n, _ := filepath.Glob(el + "/"+ entry)
-        if m || len(n) > 0 {
-            return true
-        }
+    for _, pattern := range patterns {
+        m, _ := filepath.Glob(pattern)
+        matches = append(matches, m...)
     }
 
-    return false
+    return matches 
 }
-
-func PrintUsageGuide() {
-    msg := `Usage: mgrep [pattern] [path]
-
-    You can use the flags
-        -w for workers
-        -x to exclude paths`
-    fmt.Println(msg)
-}
-
 
 func handler(q *Queue, wg *sync.WaitGroup, r *regexp.Regexp, control *SyncFlag) {
     defer wg.Done()
@@ -72,7 +57,6 @@ func handler(q *Queue, wg *sync.WaitGroup, r *regexp.Regexp, control *SyncFlag) 
 
             time.Sleep(100 * time.Nanosecond)
         }
-
 
         fi, err := os.Stat(filepath)
 
@@ -95,26 +79,24 @@ func handler(q *Queue, wg *sync.WaitGroup, r *regexp.Regexp, control *SyncFlag) 
 }
 
 func main() {
+    var wg sync.WaitGroup
 
     // Allows synchronization in order to let the
     // main function wait for the other goroutines
     control := NewFlag(false)
 
-    var wg sync.WaitGroup
-
     params, err := ParseArgs()
-
     if err != nil {
         fmt.Println(err.Error())
         os.Exit(1)
     }
 
     r, _ := regexp.Compile(*params.pattern)
+    matches := GetMatches(*params.exclude)
 
     q := NewQueue()
 
     wg.Add(*params.workers)
-
     for i := 0; i < *params.workers; i++ {
         go handler(q, &wg, r, control)
     }
@@ -126,15 +108,7 @@ func main() {
                 return err
             }
 
-            // Should exlude some paths if specified
-            if isin(pathname, *params.exclude) { 
-                return filepath.SkipDir
-            }
-            
-            // The main routine produces paths that are buffered 
-            // and consumed by the N workers 
-            q.Enqueue(pathname)
-            return nil
+            return Process(&info, pathname, q, matches)
         })
 
     if err != nil {
@@ -149,3 +123,24 @@ func main() {
     wg.Wait()
 }
 
+func Process(info *os.FileInfo, pathname string, q *Queue, excludes []string) error {
+    isdir := (*info).IsDir()
+
+    for _, n := range excludes {
+        m, err := filepath.Match(n, pathname)
+
+        if err != nil {
+            return err
+        }
+
+        if isdir && m {
+           return filepath.SkipDir 
+        }
+    }
+
+    if !isdir {
+        q.Enqueue(pathname)
+    }
+
+    return nil
+}

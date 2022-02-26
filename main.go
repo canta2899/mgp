@@ -15,9 +15,11 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"regexp"
 	"sync"
+	"syscall"
 )
 
 func GetMatches(patterns []string) []string {
@@ -88,11 +90,25 @@ func handle(err error) {
     }
 }
 
+
+func SetHandlers() {
+    // Handler for sigterm (ctrl + c from cli)
+    sigch := make(chan os.Signal)
+    signal.Notify(sigch, os.Interrupt, syscall.SIGTERM)
+    go func() {
+        <-sigch 
+        fmt.Println("\nClosing...")
+        os.Exit(0)
+    }()
+}
+
+
+
 func main() {
     var wg sync.WaitGroup
 
+    SetHandlers()
     params, err := ParseArgs()
-
     handle(err)
 
     r, _ := regexp.Compile(*params.pattern)

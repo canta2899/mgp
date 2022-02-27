@@ -68,6 +68,7 @@ func ProcessPath(info *os.FileInfo, pathname string, q *Queue, excludes []string
     isdir := (*info).IsDir()
 
     for _, n := range excludes {
+
         m, err := filepath.Match(n, pathname)
 
         if err != nil {
@@ -123,17 +124,20 @@ func main() {
     err = filepath.Walk(*params.startpath,
         func(pathname string, info os.FileInfo, err error) error {
 
+            // Checking permission and access errors
             if err != nil {
-                return err
+                fmt.Println("Cannot access", pathname)
+                if info.IsDir() {
+                    return filepath.SkipDir
+                } else {
+                    return nil
+                }
             }
 
             // Processes path in search of matches with the given
             // pattern or the folders that excluded folders
             return ProcessPath(&info, pathname, q, matches)
         })
-
-    // Panic if issues occour while traversing path
-    handle(err)
 
     // Closes the queue in order to sync with goroutines
     q.Done()

@@ -2,6 +2,7 @@ package main
 
 import (
     "github.com/akamensky/argparse"
+    "runtime"
     "os"
 )
 
@@ -31,7 +32,7 @@ func ParseArgs() (*Parameters, error) {
     params.workers = parser.Int("w", "workers", &argparse.Options{
         Help: "Number of workers, in order to define a degree of parallelism",
         Required: false,
-        Default: 2,
+        Default: runtime.NumCPU(),
     })
 
     params.exclude = parser.StringList("e", "exclude", &argparse.Options{

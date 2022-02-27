@@ -22,6 +22,8 @@ import (
 	"syscall"
 )
 
+const MEGABYTE int64 = 1048576
+
 func GetMatches(patterns []string) []string {
     matches := []string{}
 
@@ -77,7 +79,7 @@ func ProcessPath(info *os.FileInfo, pathname string, q *Queue, excludes []string
         }
     }
 
-    if !isdir {
+    if !isdir && (*info).Size() < MEGABYTE {
         q.Enqueue(pathname)
     }
 
@@ -90,7 +92,6 @@ func handle(err error) {
     }
 }
 
-
 func SetHandlers() {
     // Handler for sigterm (ctrl + c from cli)
     sigch := make(chan os.Signal)
@@ -101,8 +102,6 @@ func SetHandlers() {
         os.Exit(0)
     }()
 }
-
-
 
 func main() {
     var wg sync.WaitGroup

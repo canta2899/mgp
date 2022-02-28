@@ -20,10 +20,23 @@ import (
 	"regexp"
 	"sync"
 	"syscall"
+	"github.com/fatih/color"
 )
 
+// One megabyte
 const MEGABYTE int64 = 1048576
 
+// Runes for emoji
+const OK string = string('\u2713')
+const KO string = string('\u00D7')
+
+// Colors for printing
+var green = color.New(color.FgHiGreen).SprintFunc()
+var red = color.New(color.FgRed).SprintFunc()
+var cyan = color.New(color.FgCyan)
+
+
+// Checks paths matching the exclude pattern
 func GetMatches(patterns []string) []string {
     matches := []string{}
 
@@ -35,6 +48,7 @@ func GetMatches(patterns []string) []string {
     return matches 
 }
 
+// Routine performed by each worker
 func handler(q *Queue, wg *sync.WaitGroup, r *regexp.Regexp) {
     defer wg.Done()
 
@@ -59,11 +73,12 @@ func handler(q *Queue, wg *sync.WaitGroup, r *regexp.Regexp) {
         }
 
         if r.Match(filedata) {
-            fmt.Println(filepath)
+            fmt.Printf("%v %v\n", green(OK), filepath)
         }
     }
 }
 
+// Process path and enqueues if valid for match checking
 func ProcessPath(info *os.FileInfo, pathname string, q *Queue, excludes []string) error {
     isdir := (*info).IsDir()
 
@@ -87,19 +102,21 @@ func ProcessPath(info *os.FileInfo, pathname string, q *Queue, excludes []string
     return nil
 }
 
+// Handles fatal errors
 func handle(err error) {
     if err != nil {
-        panic(err)
+        cyan.Println(err.Error())
+        os.Exit(1)
     }
 }
 
+// Handler for sigterm (ctrl + c from cli)
 func SetHandlers() {
-    // Handler for sigterm (ctrl + c from cli)
     sigch := make(chan os.Signal)
     signal.Notify(sigch, os.Interrupt, syscall.SIGTERM)
     go func() {
         <-sigch 
-        fmt.Println("\nClosing...")
+        cyan.Println("\nClosing...")
         os.Exit(0)
     }()
 }
@@ -111,6 +128,7 @@ func main() {
     params, err := ParseArgs()
     handle(err)
 
+    color.NoColor = (*params.nocolor)
     r, _ := regexp.Compile(*params.pattern)
     matches := GetMatches(*params.exclude)
 
@@ -126,7 +144,7 @@ func main() {
 
             // Checking permission and access errors
             if err != nil {
-                fmt.Println("Cannot access", pathname)
+                fmt.Printf("%v %v\n", red(KO), pathname)
                 if info.IsDir() {
                     return filepath.SkipDir
                 } else {

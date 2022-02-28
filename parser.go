@@ -10,6 +10,7 @@ type Parameters struct {
     startpath *string
     pattern   *string
     workers   *int
+    nocolor   *bool
     exclude   *[]string
 }
 
@@ -39,6 +40,12 @@ func ParseArgs() (*Parameters, error) {
         Help: "Excluded files or directories",
         Required: false,
         Default: []string{"*/.bzr","*/CVS","*/.git","*/.hg","*/.svn","*/.idea","*/.tox"},
+    })
+
+    params.nocolor = parser.Flag("c", "no-color", &argparse.Options{
+        Help: "Unsets colored output",
+        Required: false,
+        Default: false,
     })
 
     if err := parser.Parse(os.Args); err != nil {

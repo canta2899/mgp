@@ -41,7 +41,7 @@ func GetMatches(patterns []string) []string {
     matches := []string{}
 
     for _, pattern := range patterns {
-        m, _ := filepath.Glob(pattern)
+        m, _ := filepath.Glob(filepath.Clean(pattern))
         matches = append(matches, m...)
     }
 
@@ -81,10 +81,16 @@ func handler(q *Queue, wg *sync.WaitGroup, r *regexp.Regexp) {
 // Process path and enqueues if valid for match checking
 func ProcessPath(info *os.FileInfo, pathname string, q *Queue, excludes []string) error {
     isdir := (*info).IsDir()
+    var m bool
+    var err error
 
     for _, n := range excludes {
 
-        m, err := filepath.Match(n, pathname)
+        if filepath.IsAbs(n) {
+            m, err = filepath.Match(n, pathname)
+        } else {
+            m, err = filepath.Match(n, filepath.Base(pathname))
+        }
 
         if err != nil {
             return err
@@ -102,6 +108,16 @@ func ProcessPath(info *os.FileInfo, pathname string, q *Queue, excludes []string
     return nil
 }
 
+func handlePathError(info *os.FileInfo, pathname string) error {
+    log.Printf("%v %v\n", red(KO), pathname)
+
+    if (*info).IsDir() {
+        return filepath.SkipDir
+    } else {
+        return nil
+    }
+}
+
 // Handles fatal errors
 func handle(err error) {
     if err != nil {
@@ -110,7 +126,7 @@ func handle(err error) {
 }
 
 // Handler for sigterm (ctrl + c from cli)
-func setHandlers() {
+func setSignalHandlers() {
     sigch := make(chan os.Signal)
     signal.Notify(sigch, os.Interrupt, syscall.SIGTERM)
     go func() {
@@ -127,7 +143,7 @@ func main() {
     var wg sync.WaitGroup
 
     setupLogger()
-    setHandlers()
+    setSignalHandlers()
     params, err := ParseArgs()
     handle(err)
 
@@ -148,12 +164,7 @@ func main() {
 
             // Checking permission and access errors
             if err != nil {
-                log.Printf("%v %v\n", red(KO), pathname)
-                if info.IsDir() {
-                    return filepath.SkipDir
-                } else {
-                    return nil
-                }
+                return handlePathError(&info, pathname)
             }
 
             // Processes path in search of matches with the given

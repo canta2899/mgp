@@ -4,7 +4,10 @@ import (
     "github.com/akamensky/argparse"
     "runtime"
     "os"
+    "log"
 )
+
+const VERSION string = "v1.0.0"
 
 type Parameters struct {
     startpath *string
@@ -14,7 +17,12 @@ type Parameters struct {
     exclude   *[]string
 }
 
-func ParseArgs() (*Parameters, error) {
+func ParseArgs() *Parameters {
+
+    if len(os.Args) > 1 && os.Args[1] == "--version" {
+        log.Println("Multigrep:", VERSION)
+        os.Exit(0)
+    }
 
     params := &Parameters{}
 
@@ -49,8 +57,8 @@ func ParseArgs() (*Parameters, error) {
     })
 
     if err := parser.Parse(os.Args); err != nil {
-        return params, err
+        log.Fatal(err.Error())
     }
 
-    return params, nil
+    return params
 }

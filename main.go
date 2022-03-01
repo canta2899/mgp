@@ -133,8 +133,7 @@ func main() {
 
     setupLogger()
     setSignalHandlers()
-    params, err := ParseArgs()
-    handle(err)
+    params := ParseArgs()
 
     color.NoColor = (*params.nocolor)
 
@@ -148,7 +147,8 @@ func main() {
         go handler(q, &wg, r)
     }
 
-    err = filepath.Walk(*params.startpath,
+    filepath.Walk(*params.startpath,
+
         func(pathname string, info os.FileInfo, err error) error {
 
             // Checking permission and access errors
@@ -160,6 +160,7 @@ func main() {
             // pattern or the folders that excluded folders
             // return ProcessPath(&info, pathname, q, matches)
             return ProcessPath(&info, pathname, q, *params.exclude)
+
         })
 
     // Closes the queue in order to sync with goroutines

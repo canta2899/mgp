@@ -41,7 +41,7 @@ func GetMatches(patterns []string) []string {
     matches := []string{}
 
     for _, pattern := range patterns {
-        m, _ := filepath.Glob(filepath.Clean(pattern))
+        m, _ := filepath.Glob(pattern)
         matches = append(matches, m...)
     }
 
@@ -81,23 +81,12 @@ func handler(q *Queue, wg *sync.WaitGroup, r *regexp.Regexp) {
 // Process path and enqueues if valid for match checking
 func ProcessPath(info *os.FileInfo, pathname string, q *Queue, excludes []string) error {
     isdir := (*info).IsDir()
-    var m bool
-    var err error
 
     for _, n := range excludes {
-
-        if filepath.IsAbs(n) {
-            m, err = filepath.Match(n, pathname)
-        } else {
-            m, err = filepath.Match(n, filepath.Base(pathname))
-        }
-
-        if err != nil {
-            return err
-        }
-
-        if isdir && m {
-           return filepath.SkipDir 
+        match, _ := filepath.Match(n, pathname)
+        match2, _ := filepath.Match(n, filepath.Base(pathname))
+        if isdir && (match || match2) {
+            return filepath.SkipDir 
         }
     }
 
@@ -150,7 +139,7 @@ func main() {
     color.NoColor = (*params.nocolor)
 
     r, _ := regexp.Compile(*params.pattern)
-    matches := GetMatches(*params.exclude)
+    // matches := GetMatches(*params.exclude)
 
     q := NewQueue()
 
@@ -169,7 +158,8 @@ func main() {
 
             // Processes path in search of matches with the given
             // pattern or the folders that excluded folders
-            return ProcessPath(&info, pathname, q, matches)
+            // return ProcessPath(&info, pathname, q, matches)
+            return ProcessPath(&info, pathname, q, *params.exclude)
         })
 
     // Closes the queue in order to sync with goroutines

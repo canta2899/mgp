@@ -13,14 +13,14 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"os/signal"
-	"path/filepath"
-	"regexp"
-	"sync"
-	"syscall"
-	"github.com/fatih/color"
+    "log"
+    "os"
+    "os/signal"
+    "path/filepath"
+    "regexp"
+    "sync"
+    "syscall"
+    "github.com/fatih/color"
 )
 
 // One megabyte
@@ -31,9 +31,9 @@ const OK string = string('\u2713')
 const KO string = string('\u00D7')
 
 // Colors for printing
-var green = color.New(color.FgHiGreen).SprintFunc()
-var red = color.New(color.FgRed).SprintFunc()
-var cyan = color.New(color.FgCyan)
+var green =  color.New(color.FgHiGreen).SprintFunc()
+var red   =  color.New(color.FgRed).SprintFunc()
+var cyan  =  color.New(color.FgCyan).SprintFunc()
 
 
 // Checks paths matching the exclude pattern
@@ -73,7 +73,7 @@ func handler(q *Queue, wg *sync.WaitGroup, r *regexp.Regexp) {
         }
 
         if r.Match(filedata) {
-            fmt.Printf("%v %v\n", green(OK), filepath)
+            log.Printf("%v %v\n", green(OK), filepath)
         }
     }
 }
@@ -105,30 +105,34 @@ func ProcessPath(info *os.FileInfo, pathname string, q *Queue, excludes []string
 // Handles fatal errors
 func handle(err error) {
     if err != nil {
-        cyan.Println(err.Error())
-        os.Exit(1)
+        log.Fatal(red(err.Error()))
     }
 }
 
 // Handler for sigterm (ctrl + c from cli)
-func SetHandlers() {
+func setHandlers() {
     sigch := make(chan os.Signal)
     signal.Notify(sigch, os.Interrupt, syscall.SIGTERM)
     go func() {
         <-sigch 
-        cyan.Println("\nClosing...")
-        os.Exit(0)
+        log.Fatal(cyan("\nClosing..."))
     }()
+}
+
+func setupLogger() {
+    log.SetFlags(0)
 }
 
 func main() {
     var wg sync.WaitGroup
 
-    SetHandlers()
+    setupLogger()
+    setHandlers()
     params, err := ParseArgs()
     handle(err)
 
     color.NoColor = (*params.nocolor)
+
     r, _ := regexp.Compile(*params.pattern)
     matches := GetMatches(*params.exclude)
 
@@ -144,7 +148,7 @@ func main() {
 
             // Checking permission and access errors
             if err != nil {
-                fmt.Printf("%v %v\n", red(KO), pathname)
+                log.Printf("%v %v\n", red(KO), pathname)
                 if info.IsDir() {
                     return filepath.SkipDir
                 } else {

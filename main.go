@@ -36,18 +36,6 @@ var red   =  color.New(color.FgRed).SprintFunc()
 var cyan  =  color.New(color.FgCyan).SprintFunc()
 
 
-// Checks paths matching the exclude pattern
-func GetMatches(patterns []string) []string {
-    matches := []string{}
-
-    for _, pattern := range patterns {
-        m, _ := filepath.Glob(pattern)
-        matches = append(matches, m...)
-    }
-
-    return matches 
-}
-
 // Routine performed by each worker
 func handler(q *Queue, wg *sync.WaitGroup, r *regexp.Regexp) {
     defer wg.Done()
@@ -79,7 +67,7 @@ func handler(q *Queue, wg *sync.WaitGroup, r *regexp.Regexp) {
 }
 
 // Process path and enqueues if valid for match checking
-func ProcessPath(info *os.FileInfo, pathname string, q *Queue, excludes []string) error {
+func processPath(info *os.FileInfo, pathname string, q *Queue, excludes []string) error {
     isdir := (*info).IsDir()
 
     for _, n := range excludes {
@@ -107,13 +95,6 @@ func handlePathError(info *os.FileInfo, pathname string) error {
     }
 }
 
-// Handles fatal errors
-func handle(err error) {
-    if err != nil {
-        log.Fatal(red(err.Error()))
-    }
-}
-
 // Handler for sigterm (ctrl + c from cli)
 func setSignalHandlers() {
     sigch := make(chan os.Signal)
@@ -138,7 +119,6 @@ func main() {
     color.NoColor = (*params.nocolor)
 
     r, _ := regexp.Compile(*params.pattern)
-    // matches := GetMatches(*params.exclude)
 
     q := NewQueue()
 
@@ -158,8 +138,8 @@ func main() {
 
             // Processes path in search of matches with the given
             // pattern or the folders that excluded folders
-            // return ProcessPath(&info, pathname, q, matches)
-            return ProcessPath(&info, pathname, q, *params.exclude)
+            // return processPath(&info, pathname, q, matches)
+            return processPath(&info, pathname, q, *params.exclude)
 
         })
 

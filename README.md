@@ -1,3 +1,5 @@
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+![Release workflow](https://github.com/canta2899/multigrep/actions/workflows/release.yml/badge.svg)
 
 <p align="center">
     <img src="./assets/multigrep.gif" width="700"/>
@@ -20,32 +22,72 @@ I always end up having to search for files containing a simple keyword inside a 
 
 I made this tool in order to perform the same kind of lookup while taking advantage of **goroutines** in order to parallelize the research in files while the path is being traversed.
 
-Grep still remains the best tool, but for specific needs **multigrep** may come handy too.
-
-### Note
-
-Please keep in mind that files will be read to memory while being examined, so exclude big files with the `-e` flag in order to avoid saturating your RAM.
+Grep still remains the best tool, but for specific needs **Multigrep** may come handy too.
 
 ## How it works
 
-The program follows a simple producer/consumer pattern in which the main thread enqueues all the valid paths while other previously spawned goroutines (2 by default, but you can choose the number when running the command) process them. This is done by dequeuing a path, opening the respective file and searching for a match in its content.
+The implementation follows a simple producer/consumer pattern in which a single goroutine traverses the given directory recursively adding all the valid paths to a queue. Meanwhile, a series of parallel goroutines (whose number is proportional to the amount of logical CPUs available) dequeues each path concurrently and searches for a match between its content and the pattern provided.
 
 The queue implementation in based on a thread-safe linked list and follows a standard FIFO policy. Despite **channels** are recommended (and much easier to use), it is really difficult to estimate a good buffer size in order to retain performances and ensure that it will be enough. This is the best choice I came up with but it's open to any possible improvement.
 
+## Usage
+
+Two parameters are required
+
+- The **pattern** that needs to be matched
+- The starting **path** for the recursive research
+
+These can be specified respectively with the `[-m | --match]` and the `[-p | --path]` flags.
+
+An additional parameter allows to **exclude** specific paths or directories from the research. Like in grep, the most common folders (such as .vscode, .git, .idea, etc.) will be excluded by default if no other pattern is specificed.
+
+### Examples
+
+Here's an example that searches for the word *Panda* recursively starting from the current directory and ignoring directories named *not-me* at any level.
+
+```sh
+multigrep -m "Panda" -p . -e "not-me"
+```
+
+Here's, instead, an example that searches for the word *Node* and the word *node* recursively starting from the */home/user/* path and specifically ignoring the */home/user/.local/bin* directory and directories named *.git* at any level.
+
+```sh
+multigrep -m "[Nn]ode" -p /home/user/ -e "/home/user/.local/bin" -e ".git"
+```
+
+<p align="center">
+    <h6 align="center">Pretty easy isn't it?</h6>
+</p>
+
+I highly suggest you to alias multigrep to something like `m` or `mg` in order to access it faster.
+
+### Additional flags
+
+You can **disable the colored output** by adding the `--no-color` flag to the command. Lastly, you can check your current Multigrep version by running `multigrep --version`.
+
+Running `multigrep -h` or `multigrep --help` will prompt a complete usage guide.
+
 ## Installation
 
-Install **go** and run 
+### Binaries
+
+Precompiled binaries are available in the **Releases** section of this repository. Once downloaded (let's say, for example, I've downloaded the *multigrep-v1.1.0-darwin-amd64.tar.gz* archive), one can run
 
 ```sh
-
-go get github.com/canta2899/multigrep
-
+tar -xzf multigrep-v1.0.0-darwin-amd64.tar.gz
 ```
 
-This will download and compile the program for your platform. To check if everything works, run 
+This will extract the **executable** and a text file containting the **license**. You can, then, place the binary file in your path (or symlink it). Running `multigrep --version` should, then, prompt a message stating the current version.
+
+### Source code
+
+You can also download Multigrep as a Go module. You'll have to install the Go distribution for your system and then run
 
 ```sh
-multigrep --help
+go install github.com/canta2899/multigrep@latest
 ```
+
+This will download and compile the program for your platform. Now running `multigrep --version` should prompt you the current version of the program.
+
 
 

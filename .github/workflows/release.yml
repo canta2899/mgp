@@ -1,4 +1,4 @@
-name: Release Multigrep Binaries
+name: Release 
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   releases-matrix:
-    name: Release Multigrep Binaries
+    name: Release
     runs-on: ubuntu-latest
     strategy:
       matrix:

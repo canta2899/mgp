@@ -118,7 +118,13 @@ func main() {
 
     color.NoColor = (*params.nocolor)
 
-    r, _ := regexp.Compile(*params.pattern)
+    pattern := *params.pattern
+
+    if *params.icase {
+        pattern = "(?i)" + pattern
+    }
+
+    r, _ := regexp.Compile(pattern)
 
     q := NewQueue()
 

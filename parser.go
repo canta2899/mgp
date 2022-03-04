@@ -14,6 +14,7 @@ type Parameters struct {
     pattern   *string
     workers   *int
     nocolor   *bool
+    icase     *bool
     exclude   *[]string
 }
 
@@ -52,6 +53,12 @@ func ParseArgs() *Parameters {
 
     params.nocolor = parser.Flag("c", "no-color", &argparse.Options{
         Help: "Unsets colored output",
+        Required: false,
+        Default: false,
+    })
+
+    params.icase = parser.Flag("i", "ignore-case", &argparse.Options{
+        Help: "Case insensitive match",
         Required: false,
         Default: false,
     })

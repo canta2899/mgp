@@ -13,14 +13,15 @@
 package main
 
 import (
-    "log"
-    "os"
-    "os/signal"
-    "path/filepath"
-    "regexp"
-    "sync"
-    "syscall"
-    "github.com/fatih/color"
+	"errors"
+	"log"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"regexp"
+	"sync"
+	"syscall"
+	"github.com/fatih/color"
 )
 
 // One megabyte
@@ -37,15 +38,15 @@ var cyan  =  color.New(color.FgCyan).SprintFunc()
 
 
 // Routine performed by each worker
-func handler(q *Queue, wg *sync.WaitGroup, r *regexp.Regexp) {
+func handler(ch <-chan string, wg *sync.WaitGroup, r *regexp.Regexp) {
     defer wg.Done()
 
     for {
 
-        filepath, err := q.Dequeue()
+        filepath, more := <-ch
 
-        if err != nil {
-            return 
+        if !more {
+            return
         }
 
         fi, err := os.Stat(filepath)
@@ -67,7 +68,7 @@ func handler(q *Queue, wg *sync.WaitGroup, r *regexp.Regexp) {
 }
 
 // Process path and enqueues if valid for match checking
-func processPath(info *os.FileInfo, pathname string, q *Queue, excludes []string) error {
+func processPath(info *os.FileInfo, pathname string, c chan string, excludes []string) error {
     isdir := (*info).IsDir()
 
     for _, n := range excludes {
@@ -79,7 +80,7 @@ func processPath(info *os.FileInfo, pathname string, q *Queue, excludes []string
     }
 
     if !isdir && (*info).Size() < MEGABYTE {
-        q.Enqueue(pathname)
+        c <- pathname
     }
 
     return nil
@@ -96,46 +97,52 @@ func handlePathError(info *os.FileInfo, pathname string) error {
 }
 
 // Handler for sigterm (ctrl + c from cli)
-func setSignalHandlers() {
+func setSignalHandlers(closed *bool, wg *sync.WaitGroup) {
     sigch := make(chan os.Signal)
     signal.Notify(sigch, os.Interrupt, syscall.SIGTERM)
     go func() {
         <-sigch 
-        log.Fatal(cyan("\nClosing..."))
+        *closed = true
     }()
 }
 
 func setupLogger() {
+    // With flags 0 only the message is printed, without
+    // information about time, log level and similar 
     log.SetFlags(0)
 }
 
 func main() {
     var wg sync.WaitGroup
+    ch := make(chan string, 5000)
+    closed := false
 
     setupLogger()
-    setSignalHandlers()
+    setSignalHandlers(&closed, &wg)
     params := ParseArgs()
 
     color.NoColor = (*params.nocolor)
-
     pattern := *params.pattern
-
     if *params.icase {
         pattern = "(?i)" + pattern
     }
 
     r, _ := regexp.Compile(pattern)
 
-    q := NewQueue()
-
     wg.Add(*params.workers)
     for i := 0; i < *params.workers; i++ {
-        go handler(q, &wg, r)
+        go handler(ch, &wg, r)
     }
 
     filepath.Walk(*params.startpath,
 
         func(pathname string, info os.FileInfo, err error) error {
+
+            if closed {
+                // If the termination is requested, the path Walking
+                // stops and the function returns with an error
+                return errors.New("User requested termination")
+            }
 
             // Checking permission and access errors
             if err != nil {
@@ -143,14 +150,14 @@ func main() {
             }
 
             // Processes path in search of matches with the given
-            // pattern or the folders that excluded folders
-            // return processPath(&info, pathname, q, matches)
-            return processPath(&info, pathname, q, *params.exclude)
+            // pattern or the excluded directories 
+            return processPath(&info, pathname, ch, *params.exclude)
 
         })
 
-    // Closes the queue in order to sync with goroutines
-    q.Done()
+    // The channel is closed, this communicates that
+    // no more values will be enqueued
+    close(ch)
 
     // Waits for goroutines to finish
     wg.Wait()

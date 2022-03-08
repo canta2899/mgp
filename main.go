@@ -110,6 +110,7 @@ func setupLogger() {
     // With flags 0 only the message is printed, without
     // information about time, log level and similar 
     log.SetFlags(0)
+    log.SetOutput(os.Stdout)
 }
 
 func main() {

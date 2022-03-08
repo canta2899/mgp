@@ -26,9 +26,7 @@ Grep still remains the best tool, but for specific needs **Multigrep** may come 
 
 ## How it works
 
-The implementation follows a simple producer/consumer pattern in which a single goroutine traverses the given directory recursively adding all the valid paths to a queue. Meanwhile, a series of parallel goroutines (whose number is proportional to the amount of logical CPUs available) dequeues each path concurrently and searches for a match between its content and the pattern provided.
-
-The queue implementation in based on a thread-safe linked list and follows a standard FIFO policy. Despite **channels** are recommended (and much easier to use), it is really difficult to estimate a good buffer size in order to retain performances and ensure that it will be enough. This is the best choice I came up with but it's open to any possible improvement.
+The implementation follows a simple producer/consumer pattern in which a single goroutine traverses the given directory recursively adding all the valid paths to a queue. Meanwhile, a series of parallel goroutines (whose number is proportional to the amount of logical CPUs available) dequeues each path concurrently and searches for a match between its content and the pattern provided. The queue implementation in based on go's buffered channels.
 
 ## Usage
 

@@ -7,7 +7,7 @@ import (
     "log"
 )
 
-const VERSION string = "v1.2.0"
+const VERSION string = "v1.2.1"
 
 type Parameters struct {
     startpath *string

@@ -24,6 +24,11 @@ import (
 	"github.com/fatih/color"
 )
 
+type Entry struct {
+    Path string
+    Info *os.FileInfo
+}
+
 // One megabyte
 const MEGABYTE int64 = 1048576
 
@@ -38,37 +43,38 @@ var cyan  =  color.New(color.FgCyan).SprintFunc()
 
 
 // Routine performed by each worker
-func handler(ch <-chan string, wg *sync.WaitGroup, r *regexp.Regexp) {
+func handler(ch <-chan *Entry, wg *sync.WaitGroup, r *regexp.Regexp) {
     defer wg.Done()
 
     for {
 
-        filepath, more := <-ch
+        e, more := <-ch
 
         if !more {
             return
         }
 
-        fi, err := os.Stat(filepath)
+        info, fullpath := e.Info, e.Path
 
-        if err != nil || !fi.Mode().IsRegular() {
+        if !(*info).Mode().IsRegular() {
             continue // Skips
         }
 
-        filedata, err := os.ReadFile(filepath)
+
+        filedata, err := os.ReadFile(fullpath)
 
         if err != nil {
             continue // Skips
         }
 
         if r.Match(filedata) {
-            log.Printf("%v %v\n", green(OK), filepath)
+            log.Printf("%v %v\n", green(OK), fullpath)
         }
     }
 }
 
 // Process path and enqueues if valid for match checking
-func processPath(info *os.FileInfo, pathname string, c chan string, excludes []string) error {
+func processPath(info *os.FileInfo, pathname string, c chan *Entry, excludes []string) error {
     isdir := (*info).IsDir()
 
     for _, n := range excludes {
@@ -80,7 +86,7 @@ func processPath(info *os.FileInfo, pathname string, c chan string, excludes []s
     }
 
     if !isdir && (*info).Size() < MEGABYTE {
-        c <- pathname
+        c <- &Entry{Path: pathname, Info: info} 
     }
 
     return nil
@@ -115,7 +121,7 @@ func setupLogger() {
 
 func main() {
     var wg sync.WaitGroup
-    ch := make(chan string, 5000)
+    ch := make(chan *Entry, 5000)
     closed := false
 
     setupLogger()

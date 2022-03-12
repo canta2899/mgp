@@ -92,9 +92,12 @@ func processPath(info *os.FileInfo, pathname string, c chan *Entry, excludes []s
     return nil
 }
 
-func handlePathError(info *os.FileInfo, pathname string) error {
-    log.Printf("%v %v\n", red(KO), pathname)
+func handlePathError(info *os.FileInfo, pathname string, err error) error {
 
+    if os.IsNotExist(err) { log.Fatal("Invalid path") }
+
+    log.Printf("%v %v\n", red(KO), pathname)
+    
     if (*info).IsDir() {
         return filepath.SkipDir
     } else {
@@ -153,7 +156,7 @@ func main() {
 
             // Checking permission and access errors
             if err != nil {
-                return handlePathError(&info, pathname)
+                return handlePathError(&info, pathname, err)
             }
 
             // Processes path in search of matches with the given

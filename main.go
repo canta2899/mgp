@@ -1,19 +1,9 @@
-/**
-    Multigrep
-    =========
-
-    A CLI tool that allows faster recursive search of files
-    whose content matches the given pattern.
-
-    It returns the equivalent of grep -E -r -l "pattern" "path".
-
-    Run multigrep --help for a brief usage guide
-**/
-
 package main
 
 import (
+	"bufio"
 	"errors"
+	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -28,9 +18,6 @@ type Entry struct {
     Path string
     Info *os.FileInfo
 }
-
-// One megabyte
-const MEGABYTE int64 = 1048576
 
 // Runes for emoji
 const OK string = string('\u2713')
@@ -60,42 +47,57 @@ func handler(ch <-chan *Entry, wg *sync.WaitGroup, r *regexp.Regexp) {
             continue // Skips
         }
 
-
-        filedata, err := os.ReadFile(fullpath)
+        file, err := os.OpenFile(fullpath, os.O_RDONLY, 0666)
 
         if err != nil {
             continue // Skips
         }
 
-        if r.Match(filedata) {
-            log.Printf("%v %v\n", green(OK), fullpath)
+        bufread := bufio.NewReader(file)
+
+        for {
+            line, err := bufread.ReadBytes('\n')
+
+            if err == io.EOF {
+                break
+            }
+
+            if r.Match(line) {
+                log.Printf("%v %v\n", green(OK), fullpath)
+                break
+            }
         }
+
     }
 }
 
-// Process path and enqueues if valid for match checking
-func processPath(info *os.FileInfo, pathname string, c chan *Entry, excludes []string) error {
+// Process path and enqueues if ok for match checking
+func processPath(info *os.FileInfo, pathname string, c chan *Entry, params *Parameters) error {
     isdir := (*info).IsDir()
+    exc := *(*params).exclude
+    lim := *(*params).limitMb
 
-    for _, n := range excludes {
-        match, _ := filepath.Match(n, pathname)
-        match2, _ := filepath.Match(n, filepath.Base(pathname))
-        if isdir && (match || match2) {
+    for _, n := range exc {
+        fullMatch, _ := filepath.Match(n, pathname)
+        baseMatch, _ := filepath.Match(n, filepath.Base(pathname))
+        if isdir && (fullMatch || baseMatch) {
             return filepath.SkipDir 
         }
     }
 
-    if !isdir && (*info).Size() < MEGABYTE {
+    if !isdir && (*info).Size() < int64(lim) {
         c <- &Entry{Path: pathname, Info: info} 
     }
 
     return nil
 }
 
+// Evaluates error for path and returns action to perform
 func handlePathError(info *os.FileInfo, pathname string, err error) error {
 
     if os.IsNotExist(err) { log.Fatal("Invalid path") }
 
+    // Prints error line for current path
     log.Printf("%v %v\n", red(KO), pathname)
     
     if (*info).IsDir() {
@@ -116,8 +118,7 @@ func setSignalHandlers(closed *bool, wg *sync.WaitGroup) {
 }
 
 func setupLogger() {
-    // With flags 0 only the message is printed, without
-    // information about time, log level and similar 
+    // Message wih no flags printed to stdout
     log.SetFlags(0)
     log.SetOutput(os.Stdout)
 }
@@ -161,7 +162,7 @@ func main() {
 
             // Processes path in search of matches with the given
             // pattern or the excluded directories 
-            return processPath(&info, pathname, ch, *params.exclude)
+            return processPath(&info, pathname, ch, params)
 
         })
 

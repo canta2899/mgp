@@ -8,6 +8,7 @@ import (
 )
 
 const VERSION string = "v1.2.3"
+const MEGABYTE int = 1048576
 
 type Parameters struct {
     startpath *string
@@ -16,6 +17,7 @@ type Parameters struct {
     nocolor   *bool
     icase     *bool
     exclude   *[]string
+    limitMb   *int
 }
 
 func ParseArgs() *Parameters {
@@ -61,6 +63,12 @@ func ParseArgs() *Parameters {
         Help: "Case insensitive match",
         Required: false,
         Default: false,
+    })
+
+    params.limitMb = parser.Int("s", "size", &argparse.Options{
+        Help: "Maximum size in Megabytes for files that will be scanned",
+        Required: false,
+        Default: 100*MEGABYTE,
     })
 
     if err := parser.Parse(os.Args); err != nil {

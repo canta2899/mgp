@@ -1,5 +1,6 @@
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-![Release workflow](https://github.com/canta2899/multigrep/actions/workflows/release.yml/badge.svg)
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+![Version](https://img.shields.io/github/v/release/canta2899/multigrep?display_name=tag&label=version&style=for-the-badge)
+![WrittenInGo](https://img.shields.io/badge/Written%20in%20Go-lightblue?style=for-the-badge&logo=go&color=111111)
 
 <p align="center">
     <img src="./assets/multigrep.gif" width="700"/>

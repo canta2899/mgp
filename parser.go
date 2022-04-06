@@ -1,79 +1,73 @@
 package main
 
 import (
-    "github.com/akamensky/argparse"
-    "runtime"
-    "os"
-    "log"
+	"flag"
+	"log"
+	"os"
+	"strings"
 )
 
 const VERSION string = "v1.2.3"
 const MEGABYTE int = 1048576
+const PROG_NAME = "mgp"
+
+var STD_EXC_DIRS = []string{".bzr", "CVS", ".git", ".hg", ".svn", ".idea", ".tox"}
+
+type Flags struct {
+    workers   int
+    nocolor   bool         
+    icase     bool
+    exclude   string
+    limitMb   int
+}
+
+func (f *Flags) GetExcludedDirs() []string{
+    if f.exclude == "" {
+        return STD_EXC_DIRS 
+    } 
+
+    return append(STD_EXC_DIRS, strings.Split(f.exclude, ",")...)
+}
 
 type Parameters struct {
-    startpath *string
-    pattern   *string
-    workers   *int
-    nocolor   *bool
-    icase     *bool
-    exclude   *[]string
-    limitMb   *int
+    Flags
+    startpath string
+    pattern   string
+}
+
+func PrintVersionAndExit() {
+    log.Println(PROG_NAME, VERSION)
+    os.Exit(0)
+}
+
+func PrintBriefHelpAndExit() {
+    log.Println("Usage:", PROG_NAME, "[options] pattern starting/path")
+    log.Println("Run", PROG_NAME, "-h for more information")
+    os.Exit(0);
 }
 
 func ParseArgs() *Parameters {
 
-    if len(os.Args) > 1 && os.Args[1] == "--version" {
-        log.Println("Multigrep:", VERSION)
-        os.Exit(0)
+    f := Flags{}
+
+    flag.IntVar(&f.workers, "w", 16, "Defines the number of workers")
+    flag.IntVar(&f.limitMb, "l", 100, "File size limit")
+    flag.BoolVar(&f.icase, "i", false, "Performs case insensitive matching")
+    flag.BoolVar(&f.nocolor, "c", false, "Disable colored output")
+    flag.StringVar(&f.exclude, "e", "", "Excluded paths (specified as a comma separated list like \"path1,path2\")")
+
+    f.limitMb = f.limitMb * MEGABYTE
+
+    flag.Parse()
+
+    posArgs := flag.Args()
+    if len(posArgs) < 2 {
+        PrintBriefHelpAndExit()
     }
 
-    params := &Parameters{}
-
-    parser := argparse.NewParser("multigrep", "A command line tool to search in files recursively")
-
-    params.pattern = parser.String("m", "match", &argparse.Options{
-        Help: "A regex pattern that requires to be matched",
-        Required: true,
-    })
-
-    params.startpath = parser.String("p", "path", &argparse.Options{
-        Help: "The path on which the recursive search starts",
-        Required: true,
-    })
-
-    params.workers = parser.Int("w", "workers", &argparse.Options{
-        Help: "Number of workers, in order to define a degree of parallelism",
-        Required: false,
-        Default: runtime.NumCPU(),
-    })
-
-    params.exclude = parser.StringList("e", "exclude", &argparse.Options{
-        Help: "Excluded files or directories",
-        Required: false,
-        Default: []string{"*/.bzr","*/CVS","*/.git","*/.hg","*/.svn","*/.idea","*/.tox"},
-    })
-
-    params.nocolor = parser.Flag("c", "no-color", &argparse.Options{
-        Help: "Unsets colored output",
-        Required: false,
-        Default: false,
-    })
-
-    params.icase = parser.Flag("i", "ignore-case", &argparse.Options{
-        Help: "Case insensitive match",
-        Required: false,
-        Default: false,
-    })
-
-    params.limitMb = parser.Int("s", "size", &argparse.Options{
-        Help: "Maximum size in Megabytes for files that will be scanned",
-        Required: false,
-        Default: 100*MEGABYTE,
-    })
-
-    if err := parser.Parse(os.Args); err != nil {
-        log.Fatal(err.Error())
+    return &Parameters{
+        Flags: f,
+        pattern: posArgs[0],
+        startpath: posArgs[1],
     }
-
-    return params
 }

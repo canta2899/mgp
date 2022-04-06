@@ -47,7 +47,7 @@ func handler(ch <-chan *Entry, wg *sync.WaitGroup, r *regexp.Regexp) {
             continue // Skips
         }
 
-        file, err := os.OpenFile(fullpath, os.O_RDONLY, 0666)
+        file, err := os.Open(fullpath)
 
         if err != nil {
             continue // Skips
@@ -67,25 +67,29 @@ func handler(ch <-chan *Entry, wg *sync.WaitGroup, r *regexp.Regexp) {
                 break
             }
         }
-
+        file.Close()
     }
 }
 
 // Process path and enqueues if ok for match checking
 func processPath(info *os.FileInfo, pathname string, c chan *Entry, params *Parameters) error {
     isdir := (*info).IsDir()
-    exc := *(*params).exclude
-    lim := *(*params).limitMb
+    exc := params.GetExcludedDirs()
+    lim := params.limitMb
+
+    // log.Println("Checking file", pathname)
 
     for _, n := range exc {
         fullMatch, _ := filepath.Match(n, pathname)
         baseMatch, _ := filepath.Match(n, filepath.Base(pathname))
         if isdir && (fullMatch || baseMatch) {
+            // log.Println("Skipping", pathname)
             return filepath.SkipDir 
         }
     }
 
     if !isdir && (*info).Size() < int64(lim) {
+        // log.Println("Enqueuing file", pathname)
         c <- &Entry{Path: pathname, Info: info} 
     }
 
@@ -99,6 +103,7 @@ func handlePathError(info *os.FileInfo, pathname string, err error) error {
 
     // Prints error line for current path
     log.Printf("%v %v\n", red(KO), pathname)
+    log.Printf(err.Error())
     
     if (*info).IsDir() {
         return filepath.SkipDir
@@ -132,20 +137,20 @@ func main() {
     setSignalHandlers(&closed, &wg)
     params := ParseArgs()
 
-    color.NoColor = (*params.nocolor)
-    pattern := *params.pattern
-    if *params.icase {
+    color.NoColor = (params.nocolor)
+    pattern := params.pattern
+    if params.icase {
         pattern = "(?i)" + pattern
     }
 
     r, _ := regexp.Compile(pattern)
 
-    wg.Add(*params.workers)
-    for i := 0; i < *params.workers; i++ {
+    wg.Add(params.workers)
+    for i := 0; i < params.workers; i++ {
         go handler(ch, &wg, r)
     }
 
-    filepath.Walk(*params.startpath,
+    filepath.Walk(params.startpath,
 
         func(pathname string, info os.FileInfo, err error) error {
 

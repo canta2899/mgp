@@ -1,10 +1,10 @@
-module github.com/canta2899/multigrep
+module github.com/canta2899/mgp
 
 go 1.18
 
 require (
-	github.com/akamensky/argparse v1.3.1
 	github.com/fatih/color v1.13.0
+	github.com/jessevdk/go-flags v1.5.0
 )
 
 require (

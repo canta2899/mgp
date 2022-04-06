@@ -6,7 +6,7 @@
     <img src="./assets/multigrep.gif" width="700"/>
 </p>
 <h1 align="center">
-    Multigrep
+    MGP
 </h1>
 
 A dumb and platform independent command line tool made in Go that performs the equivalent of the following **grep** command, but without taking **ages** to complete.
@@ -23,7 +23,7 @@ I always end up having to search for files containing a simple keyword inside a 
 
 I made this tool in order to perform the same kind of lookup while taking advantage of **goroutines** in order to parallelize the research in files while the path is being traversed.
 
-Grep still remains the best tool, but for specific needs **Multigrep** may come handy too.
+Grep still remains the best tool, but for specific needs **MGP** may come handy too.
 
 ## How it works
 
@@ -36,57 +36,56 @@ Two parameters are required
 - The **pattern** that needs to be matched
 - The starting **path** for the recursive research
 
-These can be specified respectively with the `[-m | --match]` and the `[-p | --path]` flags.
+These can be specified as positional arguments like in grep. Moreover, additional flags can be specified before the pattern and the starting path. These allow to: 
 
-An additional parameter allows to **exclude** specific paths or directories from the research. Like in grep, the most common folders (such as .vscode, .git, .idea, etc.) will be excluded by default if no other pattern is specificed.
+- Exclude specific path or directories `-e "path1,path2,path3"` 
+- Specify a size limit (in Megabytes) in order to exclude big files `-l 800`
+- Specify a number of workers in order to change the degree of parallelism `-w 16`
+- Disable the colored output `-c`
+- Perform case insensitive matching `-i`
 
 ### Examples
 
 Here's an example that searches for the word *Panda* recursively starting from the current directory and ignoring directories named *not-me* at any level.
 
 ```sh
-multigrep -m "Panda" -p . -e "not-me"
+mgp -e "not-me" Panda . 
 ```
 
 Here's, instead, an example that searches for the word *Node* and the word *node* recursively starting from the */home/user/* path and specifically ignoring the */home/user/.local/bin* directory and directories named *.git* at any level.
 
 ```sh
-multigrep -m "[Nn]ode" -p /home/user/ -e "/home/user/.local/bin" -e ".git"
+mgp -e ".git,/home/user.local/bin" "[Nn]ode" /home/user/ 
 ```
 
 <p align="center">
     <h6 align="center">Pretty easy isn't it?</h6>
 </p>
 
-I highly suggest you to alias multigrep to something like `m` or `mg` in order to access it faster.
 
-### Additional flags
-
-You can **disable the colored output** by adding the `--no-color` flag to the command. Lastly, you can check your current Multigrep version by running `multigrep --version`.
-
-Running `multigrep -h` or `multigrep --help` will prompt a complete usage guide.
+Running `multigrep -h` or `multigrep --help` will prompt a usage guide too.
 
 ## Installation
 
 ### Binaries
 
-Precompiled binaries are available in the **Releases** section of this repository. Once downloaded (let's say, for example, I've downloaded the *multigrep-v1.1.0-darwin-amd64.tar.gz* archive), one can run
+Precompiled binaries are available in the **Releases** section of this repository. Once downloaded (let's say, for example, I've downloaded the *mgp-v1.1.0-darwin-amd64.tar.gz* archive), one can run
 
 ```sh
-tar -xzf multigrep-v1.0.0-darwin-amd64.tar.gz
+tar -xzf mgp-v1.0.0-darwin-amd64.tar.gz
 ```
 
-This will extract the **executable** and a text file containting the **license**. You can, then, place the binary file in your path (or symlink it). Running `multigrep --version` should, then, prompt a message stating the current version.
+This will extract the **executable** and a text file containting the **license**. You can, then, place the binary file in your path (or symlink it). Running `mgp -v` should, then, prompt a message stating the current version.
 
 ### Source code
 
-You can also download Multigrep as a Go module. You'll have to install the Go distribution for your system and then run
+You can also download **MGP** as a Go module. You'll have to install the Go distribution for your system and then run
 
 ```sh
-go install github.com/canta2899/multigrep@latest
+go install github.com/canta2899/mgp@latest
 ```
 
-This will download and compile the program for your platform. Now running `multigrep --version` should prompt you the current version of the program.
+This will download and compile the program for your platform.
 
 
 

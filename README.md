@@ -1,5 +1,5 @@
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
-![Version](https://img.shields.io/github/v/release/canta2899/multigrep?display_name=tag&label=version&style=for-the-badge)
+![Version](https://img.shields.io/github/v/release/canta2899/mgp?display_name=tag&label=version&style=for-the-badge)
 ![WrittenInGo](https://img.shields.io/badge/Written%20in%20Go-lightblue?style=for-the-badge&logo=go&color=111111)
 
 <p align="center">
@@ -62,8 +62,6 @@ mgp -e ".git,/home/user.local/bin" "[Nn]ode" /home/user/
     <h6 align="center">Pretty easy isn't it?</h6>
 </p>
 
-
-Running `multigrep -h` or `multigrep --help` will prompt a usage guide too.
 
 ## Installation
 

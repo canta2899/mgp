@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const VERSION string = "v1.2.3"
+const VERSION string = "v1.3.0"
 const MEGABYTE int = 1048576
 const PROG_NAME = "mgp"
 

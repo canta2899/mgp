@@ -23,7 +23,7 @@ jobs:
           draft: false
           prerelease: false
 
-  deploy:
+  publish-assets:
     needs: create-release
     name: Publish assets 
     runs-on: ubuntu-latest
@@ -44,6 +44,6 @@ jobs:
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
           project_path: "."
-          binary_name: "mg"
+          binary_name: "mgp"
           extra_files: LICENSE
 

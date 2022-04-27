@@ -19,6 +19,16 @@ type Entry struct {
     Info *os.FileInfo
 }
 
+type MessageType int64
+
+const (
+    Match MessageType = iota
+    ErrorMatch
+    Log
+)
+
+var coloredOutput bool = true
+
 // Runes for emoji
 const OK string = string('\u2713')
 const KO string = string('\u00D7')
@@ -26,7 +36,25 @@ const KO string = string('\u00D7')
 // Colors for printing
 var green =  color.New(color.FgHiGreen).SprintFunc()
 var red   =  color.New(color.FgRed).SprintFunc()
-var cyan  =  color.New(color.FgCyan).SprintFunc()
+
+func printHandler(message string, messageType MessageType) {
+    switch messageType {
+    case Match:
+        if coloredOutput {
+            log.Printf("%v %v\n", green(OK), message)
+        } else {
+            log.Printf("%v\n", message)
+        }
+        return;
+    case ErrorMatch:
+        if coloredOutput {
+            log.Printf("%v %v\n", red(KO), message)
+        }
+        return;
+    }
+
+    log.Printf(message)
+}
 
 
 // Routine performed by each worker
@@ -63,7 +91,7 @@ func handler(ch <-chan *Entry, wg *sync.WaitGroup, r *regexp.Regexp) {
             }
 
             if r.Match(line) {
-                log.Printf("%v %v\n", green(OK), fullpath)
+                printHandler(fullpath, Match)
                 break
             }
         }
@@ -77,19 +105,15 @@ func processPath(info *os.FileInfo, pathname string, c chan *Entry, params *Para
     exc := params.GetExcludedDirs()
     lim := params.limitMb
 
-    // log.Println("Checking file", pathname)
-
     for _, n := range exc {
         fullMatch, _ := filepath.Match(n, pathname)
         baseMatch, _ := filepath.Match(n, filepath.Base(pathname))
         if isdir && (fullMatch || baseMatch) {
-            // log.Println("Skipping", pathname)
             return filepath.SkipDir 
         }
     }
 
     if !isdir && (*info).Size() < int64(lim) {
-        // log.Println("Enqueuing file", pathname)
         c <- &Entry{Path: pathname, Info: info} 
     }
 
@@ -102,8 +126,8 @@ func handlePathError(info *os.FileInfo, pathname string, err error) error {
     if os.IsNotExist(err) { log.Fatal("Invalid path") }
 
     // Prints error line for current path
-    log.Printf("%v %v\n", red(KO), pathname)
-    log.Printf(err.Error())
+    printHandler(pathname, ErrorMatch)
+    printHandler(err.Error(), Log)
     
     if (*info).IsDir() {
         return filepath.SkipDir
@@ -114,7 +138,7 @@ func handlePathError(info *os.FileInfo, pathname string, err error) error {
 
 // Handler for sigterm (ctrl + c from cli)
 func setSignalHandlers(closed *bool, wg *sync.WaitGroup) {
-    sigch := make(chan os.Signal)
+    sigch := make(chan os.Signal, 1)
     signal.Notify(sigch, os.Interrupt, syscall.SIGTERM)
     go func() {
         <-sigch 
@@ -137,8 +161,9 @@ func main() {
     setSignalHandlers(&closed, &wg)
     params := ParseArgs()
 
-    color.NoColor = (params.nocolor)
     pattern := params.pattern
+    coloredOutput = !params.nocolor
+    
     if params.icase {
         pattern = "(?i)" + pattern
     }

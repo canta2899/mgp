@@ -1,26 +1,60 @@
 package main
 
 import (
-	"log"
-	"os"
+	"bytes"
+	"io"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
-func TestRun(t *testing.T) {
+func IsPathExpected(expected []string, current string) bool {
+	currentAbs, _ := filepath.Abs(filepath.Clean(current))
 
-	outputFile, err := os.Create("./output_test.txt")
+	for _, entry := range expected {
+		expectedAbs, _ := filepath.Abs(filepath.Clean(entry))
 
-	if err != nil {
-		t.Error("Unable to create output test file")
+		if expectedAbs == currentAbs {
+			return true
+		}
 	}
+	return false
+}
 
-	wd, _ := os.Getwd()
-	abs, _ := filepath.Abs("../logo-ls/")
-
-	log.Println("Current path is", wd)
+func TestValidMatches(t *testing.T) {
 
 	limit := 1048576 * 500
 
-	Run(outputFile, 16, false, false, abs, "Copy", []string{".bzr", "CVS", ".git", ".hg", ".svn", ".idea", ".tox"}, limit)
+	var buf bytes.Buffer
+
+	expectedOutputs := map[string][]string{
+		"level1": {"./test/data.txt"},
+		"level2": {"./test/level2/data.txt"},
+		"level3": {"./test/level3/data.txt"},
+	}
+
+	for key, expected := range expectedOutputs {
+
+		Run(&buf, 16, false, false, "./test", key, []string{".bzr", "CVS", ".git", ".hg", ".svn", ".idea", ".tox"}, limit)
+
+		for {
+			line, err := buf.ReadBytes('\n')
+
+			obtained := strings.TrimSuffix(string(line), "\n")
+
+			if err == io.EOF {
+				break
+			}
+
+			if err != nil {
+				t.Error("Error while reading command output")
+			}
+
+			if !IsPathExpected(expected, obtained) {
+				t.Errorf("%v is not expected. Output should contain %v\n", string(line), expected)
+			}
+
+		}
+
+	}
 }

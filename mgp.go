@@ -16,8 +16,8 @@ import (
 )
 
 type Entry struct {
+	os.FileInfo
 	Path string
-	Info *os.FileInfo
 }
 
 type MessageType int64
@@ -71,13 +71,11 @@ func handler(ch <-chan *Entry, closech <-chan bool, wg *sync.WaitGroup, r *regex
 				return
 			}
 
-			info, fullpath := e.Info, e.Path
-
-			if !(*info).Mode().IsRegular() {
+			if !(*e).Mode().IsRegular() {
 				continue // Skips
 			}
 
-			file, err := os.Open(fullpath)
+			file, err := os.Open(e.Path)
 
 			if err != nil {
 				continue // Skips
@@ -93,7 +91,7 @@ func handler(ch <-chan *Entry, closech <-chan bool, wg *sync.WaitGroup, r *regex
 				}
 
 				if r.Match(line) {
-					printHandler(fullpath, MatchMessage)
+					printHandler(e.Path, MatchMessage)
 					break
 				}
 			}
@@ -105,36 +103,36 @@ func handler(ch <-chan *Entry, closech <-chan bool, wg *sync.WaitGroup, r *regex
 }
 
 // Process path and enqueues if ok for match checking
-func processPath(info *os.FileInfo, pathname string, c chan *Entry, exc []string, limitMb int) error {
-	isdir := (*info).IsDir()
+func processPath(e *Entry, c chan *Entry, exc []string, limitMb int) error {
+	isdir := (*e).IsDir()
 
 	for _, n := range exc {
-		fullMatch, _ := filepath.Match(n, pathname)
-		baseMatch, _ := filepath.Match(n, filepath.Base(pathname))
+		fullMatch, _ := filepath.Match(n, e.Path)
+		baseMatch, _ := filepath.Match(n, filepath.Base(e.Path))
 		if isdir && (fullMatch || baseMatch) {
 			return filepath.SkipDir
 		}
 	}
 
-	if !isdir && (*info).Size() < int64(limitMb) {
-		c <- &Entry{Path: pathname, Info: info}
+	if !isdir && (*e).Size() < int64(limitMb) {
+		c <- e
 	}
 
 	return nil
 }
 
 // Evaluates error for path and returns action to perform
-func handlePathError(info *os.FileInfo, pathname string, err error) error {
+func handlePathError(e *Entry, err error) error {
 
 	if os.IsNotExist(err) {
 		log.Fatal("Invalid path")
 	}
 
 	// Prints error line for current path
-	printHandler(pathname, ErrorMatchMessage)
+	printHandler(e.Path, ErrorMatchMessage)
 	printHandler(err.Error(), TextMessage)
 
-	if (*info).IsDir() {
+	if (*e).IsDir() {
 		return filepath.SkipDir
 	} else {
 		return nil
@@ -199,14 +197,19 @@ func Run(out io.Writer, workers int,
 				return errors.New("user requested termination")
 			}
 
+			e := &Entry{
+				FileInfo: info,
+				Path:     pathname,
+			}
+
 			// Checking permission and access errors
 			if err != nil {
-				return handlePathError(&info, pathname, err)
+				return handlePathError(e, err)
 			}
 
 			// Processes path in search of matches with the given
 			// pattern or the excluded directories
-			return processPath(&info, pathname, ch, exludedDirs, limitMb)
+			return processPath(e, ch, exludedDirs, limitMb)
 
 		})
 

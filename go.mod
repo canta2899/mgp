@@ -2,10 +2,7 @@ module github.com/canta2899/mgp
 
 go 1.18
 
-require (
-	github.com/fatih/color v1.13.0
-	github.com/jessevdk/go-flags v1.5.0
-)
+require github.com/fatih/color v1.13.0
 
 require (
 	github.com/mattn/go-colorable v0.1.9 // indirect

@@ -54,7 +54,7 @@ func printHandler(message string, messageType MessageType) {
 		return
 	}
 
-	log.Printf(message)
+	log.Println(message)
 }
 
 // Routine performed by each worker
@@ -65,7 +65,7 @@ func handler(ch <-chan *Entry, closech <-chan bool, wg *sync.WaitGroup, r *regex
 
 		select {
 		case <-closech:
-			break
+			return
 		case e, more := <-ch:
 			if !more {
 				return
@@ -195,7 +195,7 @@ func Run(out io.Writer, workers int,
 			if stopWalk {
 				// If the termination is requested, the path Walking
 				// stops and the function returns with an error
-				return errors.New("User requested termination")
+				return errors.New("user requested termination")
 			}
 
 			// Checking permission and access errors

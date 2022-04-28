@@ -154,6 +154,7 @@ func setSignalHandlers(closed []chan bool, stopWalk *bool, wg *sync.WaitGroup) {
 
 		for _, closeChan := range closed {
 			closeChan <- true
+			close(closeChan)
 		}
 
 	}()
@@ -184,7 +185,7 @@ func main() {
 	wg.Add(params.workers)
 	for i := 0; i < params.workers; i++ {
 		closeChan := make(chan bool)
-		closeSignalChans = append(closeSignalChans, closeChan)
+		closeSignalChans[i] = closeChan
 		go handler(ch, closeChan, &wg, r)
 	}
 

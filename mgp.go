@@ -142,7 +142,7 @@ func handlePathError(info *os.FileInfo, pathname string, err error) error {
 }
 
 // Handler for sigterm (ctrl + c from cli)
-func setSignalHandlers(closed []chan bool, stopWalk *bool, wg *sync.WaitGroup) {
+func setSignalHandlers(closed chan bool, workers int, stopWalk *bool, wg *sync.WaitGroup) {
 	sigch := make(chan os.Signal, 1)
 	signal.Notify(sigch, os.Interrupt, syscall.SIGTERM)
 	go func() {
@@ -150,9 +150,8 @@ func setSignalHandlers(closed []chan bool, stopWalk *bool, wg *sync.WaitGroup) {
 
 		*stopWalk = true
 
-		for _, closeChan := range closed {
-			closeChan <- true
-			close(closeChan)
+		for i := 0; i < workers; i++ {
+			closed <- true
 		}
 
 	}()
@@ -163,31 +162,33 @@ func Run(out io.Writer, workers int,
 	startpath string, pattern string,
 	exludedDirs []string, limitMb int) {
 
+	// Configuring logger
 	log.SetFlags(0)
 	log.SetOutput(out)
 
+	// Output with symbols and colors
 	coloredOutput = colors
 
+	// Regex compilation
 	if caseInsensitive {
 		pattern = "(?i)" + pattern
 	}
-
 	r, _ := regexp.Compile(pattern)
 
+	// Tools for synchronization
 	var wg sync.WaitGroup
 	stopWalk := false
-	closeSignalChans := make([]chan bool, workers)
-	setSignalHandlers(closeSignalChans, &stopWalk, &wg)
-
+	closeSignalChan := make(chan bool, workers)
 	ch := make(chan *Entry, 5000)
+	setSignalHandlers(closeSignalChan, workers, &stopWalk, &wg)
 
+	// Spawning routines
 	wg.Add(workers)
 	for i := 0; i < workers; i++ {
-		closeChan := make(chan bool)
-		closeSignalChans[i] = closeChan
-		go handler(ch, closeChan, &wg, r)
+		go handler(ch, closeSignalChan, &wg, r)
 	}
 
+	// Traversing filepath
 	filepath.Walk(startpath,
 
 		func(pathname string, info os.FileInfo, err error) error {
@@ -215,6 +216,9 @@ func Run(out io.Writer, workers int,
 
 	// Waits for goroutines to finish
 	wg.Wait()
+
+	// Ensures signal chan
+	close(closeSignalChan)
 
 	if stopWalk {
 		printHandler("Ended by user", TextMessage)

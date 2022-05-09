@@ -50,6 +50,9 @@ func ParseArgs() *Parameters {
 
 	f := Flags{}
 
+    log.SetFlags(0)
+    log.SetOutput(os.Stdout)
+
 	printVersion := false
 
 	flag.IntVar(&f.workers, "w", 16, "Defines the number of workers")

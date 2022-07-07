@@ -171,7 +171,12 @@ func Run(out io.Writer, workers int,
 	if caseInsensitive {
 		pattern = "(?i)" + pattern
 	}
-	r, _ := regexp.Compile(pattern)
+	r, err := regexp.Compile(pattern)
+
+        if err != nil {
+	    printHandler("Error in regex pattern", TextMessage)
+            os.Exit(1)
+        }
 
 	// Tools for synchronization
 	var wg sync.WaitGroup

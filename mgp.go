@@ -4,60 +4,21 @@ import (
 	"bufio"
 	"errors"
 	"io"
-	"log"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"regexp"
 	"sync"
 	"syscall"
-
-	"github.com/fatih/color"
 )
 
 var wg sync.WaitGroup
 var sChan chan bool
+var m *MessageHandler
 
 type Entry struct {
 	os.FileInfo
 	Path string
-}
-
-type MessageType int64
-
-const (
-	MatchMessage MessageType = iota
-	ErrorMatchMessage
-	TextMessage
-)
-
-var coloredOutput bool = true
-
-// Runes for emoji
-const OK string = string('\u2713')
-const KO string = string('\u00D7')
-
-// Colors for printing
-var green = color.New(color.FgHiGreen).SprintFunc()
-var red = color.New(color.FgRed).SprintFunc()
-
-func printHandler(message string, messageType MessageType) {
-	switch messageType {
-	case MatchMessage:
-		if coloredOutput {
-			log.Printf("%v %v\n", green(OK), message)
-		} else {
-			log.Printf("%v\n", message)
-		}
-		return
-	case ErrorMatchMessage:
-		if coloredOutput {
-			log.Printf("%v %v\n", red(KO), message)
-		}
-		return
-	}
-
-	log.Println(message)
 }
 
 // Process path and enqueues if ok for match checking
@@ -104,7 +65,7 @@ func processPath(e *Entry, exc []string, limitMb int, r *regexp.Regexp) error {
 			}
 
 			if r.Match(line) {
-				printHandler(e.Path, MatchMessage)
+				m.printSuccess(e.Path)
 				break
 			}
 		}
@@ -118,19 +79,18 @@ func processPath(e *Entry, exc []string, limitMb int, r *regexp.Regexp) error {
 func handlePathError(e *Entry, err error) error {
 
 	if os.IsNotExist(err) {
-		log.Fatal("Invalid path")
+		m.printFatal("Invalid path")
 	}
 
 	// Prints error line for current path
-	printHandler(e.Path, ErrorMatchMessage)
-	printHandler(err.Error(), TextMessage)
+	m.printError(e.Path)
+	m.printInfo(err.Error())
 
-	return filepath.SkipDir
-	// if (*e).IsDir() {
-	// 	return filepath.SkipDir
-	// } else {
-	// 	return nil
-	// }
+	if (*e).IsDir() {
+		return filepath.SkipDir
+	} else {
+		return nil
+	}
 }
 
 // Handler for sigterm (ctrl + c from cli)
@@ -148,13 +108,8 @@ func Run(out io.Writer, workers int,
 	startpath string, pattern string,
 	exludedDirs []string, limitMb int) {
 
-	// Configuring logger
-	log.SetFlags(0)
-	log.SetOutput(out)
-
 	sChan = make(chan bool, workers)
-
-	coloredOutput = colors
+	m = NewMessageHandler(colors, out)
 
 	// Regex compilation
 	if caseInsensitive {
@@ -163,7 +118,7 @@ func Run(out io.Writer, workers int,
 	r, err := regexp.Compile(pattern)
 
 	if err != nil {
-		printHandler("Error in regex pattern", TextMessage)
+		m.printInfo("Error in regex pattern")
 		os.Exit(1)
 	}
 
@@ -201,6 +156,6 @@ func Run(out io.Writer, workers int,
 	wg.Wait()
 
 	if stopWalk {
-		printHandler("Ended by user", TextMessage)
+		m.printInfo("Ended by user")
 	}
 }

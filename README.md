@@ -3,7 +3,7 @@
 ![WrittenInGo](https://img.shields.io/badge/Written%20in%20Go-lightblue?style=for-the-badge&logo=go&color=111111)
 
 <p align="center">
-    <img src="./assets/multigrep.gif" width="700"/>
+    <img src="./assets/mgp.gif" width="700"/>
 </p>
 <h1 align="center">
     MGP
@@ -27,7 +27,7 @@ Grep still remains the best tool, but for specific needs **MGP** may come handy 
 
 ## How it works
 
-The implementation follows a simple producer/consumer pattern in which a single goroutine traverses the given directory recursively adding all the valid paths to a queue. Meanwhile, a series of parallel goroutines (whose number is proportional to the amount of logical CPUs available) dequeues each path concurrently and searches for a match between its content and the pattern provided. The queue implementation in based on go's buffered channels.
+The implementation is based on a recursive traversion that starts from the given base path and excludes sub-trees or files according to their names or, eventually, their size in bytes. Every result from the traversation is then, processed asynchronously in search of a match with a given pattern. 
 
 ## Usage
 
@@ -40,11 +40,23 @@ These can be specified as positional arguments like in grep. Moreover, additiona
 
 - Exclude specific path or directories `-e "path1,path2,path3"` 
 - Specify a size limit (in Megabytes) in order to exclude big files `-l 800`
-- Specify a number of workers in order to change the degree of parallelism `-w 16`
+- Specify the maximum number of goroutines that can run simultaneously `-w 100`
 - Disable the colored output `-c`
 - Perform case insensitive matching `-i`
 
 ### Examples
+
+Here's an example that searches for word "Music" recursiverly starting from the current directory.
+
+```sh
+mgp Music . 
+```
+
+Case insensitive matches can be enabled using the the `-i` flag.
+
+```sh
+mgp -i music . 
+```
 
 Here's an example that searches for the word *Panda* recursively starting from the current directory and ignoring directories named *not-me* at any level.
 

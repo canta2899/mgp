@@ -13,7 +13,7 @@ import (
 )
 
 var wg sync.WaitGroup
-var sChan chan bool
+var sChan chan int
 var m *MessageHandler
 
 type Entry struct {
@@ -38,13 +38,8 @@ func processPath(e *Entry, exc []string, limitMb int, r *regexp.Regexp) error {
 	}
 
 	wg.Add(1)
-	sChan <- true
+	sChan <- 0
 	go func() {
-		defer func() {
-			<-sChan
-			wg.Done()
-		}()
-
 		if !(*e).Mode().IsRegular() {
 			return // Skips
 		}
@@ -54,6 +49,12 @@ func processPath(e *Entry, exc []string, limitMb int, r *regexp.Regexp) error {
 		if err != nil {
 			return // Skips
 		}
+
+		defer func() {
+			file.Close()
+			<-sChan
+			wg.Done()
+		}()
 
 		bufread := bufio.NewReader(file)
 
@@ -103,12 +104,17 @@ func setSignalHandlers(stopWalk *bool) {
 	}()
 }
 
-func Run(out io.Writer, workers int,
-	caseInsensitive bool, colors bool,
-	startpath string, pattern string,
-	exludedDirs []string, limitMb int) {
+func Run(
+	out io.Writer,
+	workers int,
+	caseInsensitive bool,
+	colors bool,
+	startpath string,
+	pattern string,
+	exludedDirs []string,
+	limitMb int) {
 
-	sChan = make(chan bool, workers)
+	sChan = make(chan int, workers)
 	m = NewMessageHandler(colors, out)
 
 	// Regex compilation
@@ -149,7 +155,6 @@ func Run(out io.Writer, workers int,
 			// Processes path in search of matches with the given
 			// pattern or the excluded directories
 			return processPath(e, exludedDirs, limitMb, r)
-
 		})
 
 	// Waits for goroutines to finish

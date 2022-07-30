@@ -35,12 +35,8 @@ type Parameters struct {
 	pattern   string
 }
 
-func PrintVersionAndExit() {
-	log.Println(PROG_NAME, VERSION)
-	os.Exit(0)
-}
-
 func PrintBriefHelpAndExit() {
+	log.Println(PROG_NAME, VERSION)
 	log.Println("Usage:", PROG_NAME, "[options] pattern starting/path")
 	log.Println("Run", PROG_NAME, "-h for more information")
 	os.Exit(0)
@@ -55,7 +51,7 @@ func ParseArgs() *Parameters {
 
 	printVersion := false
 
-	flag.IntVar(&f.workers, "w", 1000, "Defines the number of workers")
+	flag.IntVar(&f.workers, "w", 100, "Defines the max number of routines running at the same time")
 	flag.BoolVar(&printVersion, "v", false, "Prints current mgp version")
 	flag.IntVar(&f.limitBytes, "l", 100, "File size limit")
 	flag.BoolVar(&f.icase, "i", false, "Performs case insensitive matching")
@@ -67,12 +63,8 @@ func ParseArgs() *Parameters {
 	flag.Parse()
 
 	posArgs := flag.Args()
-	if len(posArgs) < 2 {
+	if printVersion || len(posArgs) < 2 {
 		PrintBriefHelpAndExit()
-	}
-
-	if printVersion {
-		PrintVersionAndExit()
 	}
 
 	return &Parameters{

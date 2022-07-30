@@ -16,6 +16,7 @@ import (
 )
 
 var wg sync.WaitGroup
+var sChan chan bool
 
 type Entry struct {
 	os.FileInfo
@@ -59,51 +60,6 @@ func printHandler(message string, messageType MessageType) {
 	log.Println(message)
 }
 
-// Routine performed by each worker
-func handler(ch <-chan *Entry, closech <-chan bool, wg *sync.WaitGroup, r *regexp.Regexp) {
-	defer wg.Done()
-
-	for {
-
-		select {
-		case <-closech:
-			return
-		case e, more := <-ch:
-			if !more {
-				return
-			}
-
-			if !(*e).Mode().IsRegular() {
-				continue // Skips
-			}
-
-			file, err := os.Open(e.Path)
-
-			if err != nil {
-				continue // Skips
-			}
-
-			bufread := bufio.NewReader(file)
-
-			for {
-				line, err := bufread.ReadBytes('\n')
-
-				if err == io.EOF {
-					break
-				}
-
-				if r.Match(line) {
-					printHandler(e.Path, MatchMessage)
-					break
-				}
-			}
-			file.Close()
-		default:
-			continue
-		}
-	}
-}
-
 // Process path and enqueues if ok for match checking
 func processPath(e *Entry, exc []string, limitMb int, r *regexp.Regexp) error {
 	isdir := (*e).IsDir()
@@ -116,37 +72,44 @@ func processPath(e *Entry, exc []string, limitMb int, r *regexp.Regexp) error {
 		}
 	}
 
-	if !isdir && (*e).Size() < int64(limitMb) {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			if !(*e).Mode().IsRegular() {
-				return // Skips
-			}
-
-			file, err := os.Open(e.Path)
-
-			if err != nil {
-				return // Skips
-			}
-
-			bufread := bufio.NewReader(file)
-
-			for {
-				line, err := bufread.ReadBytes('\n')
-
-				if err == io.EOF {
-					break
-				}
-
-				if r.Match(line) {
-					printHandler(e.Path, MatchMessage)
-					break
-				}
-			}
-			file.Close()
-		}()
+	if isdir || (*e).Size() > int64(limitMb) {
+		return nil
 	}
+
+	wg.Add(1)
+	sChan <- true
+	go func() {
+		defer func() {
+			<-sChan
+			wg.Done()
+		}()
+
+		if !(*e).Mode().IsRegular() {
+			return // Skips
+		}
+
+		file, err := os.Open(e.Path)
+
+		if err != nil {
+			return // Skips
+		}
+
+		bufread := bufio.NewReader(file)
+
+		for {
+			line, err := bufread.ReadBytes('\n')
+
+			if err == io.EOF {
+				break
+			}
+
+			if r.Match(line) {
+				printHandler(e.Path, MatchMessage)
+				break
+			}
+		}
+		file.Close()
+	}()
 
 	return nil
 }
@@ -162,26 +125,21 @@ func handlePathError(e *Entry, err error) error {
 	printHandler(e.Path, ErrorMatchMessage)
 	printHandler(err.Error(), TextMessage)
 
-	if (*e).IsDir() {
-		return filepath.SkipDir
-	} else {
-		return nil
-	}
+	return filepath.SkipDir
+	// if (*e).IsDir() {
+	// 	return filepath.SkipDir
+	// } else {
+	// 	return nil
+	// }
 }
 
 // Handler for sigterm (ctrl + c from cli)
-func setSignalHandlers(closed chan bool, workers int, stopWalk *bool, wg *sync.WaitGroup) {
+func setSignalHandlers(stopWalk *bool) {
 	sigch := make(chan os.Signal, 1)
 	signal.Notify(sigch, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-sigch
-
 		*stopWalk = true
-
-		for i := 0; i < workers; i++ {
-			closed <- true
-		}
-
 	}()
 }
 
@@ -194,7 +152,8 @@ func Run(out io.Writer, workers int,
 	log.SetFlags(0)
 	log.SetOutput(out)
 
-	// Output with symbols and colors
+	sChan = make(chan bool, workers)
+
 	coloredOutput = colors
 
 	// Regex compilation
@@ -208,18 +167,8 @@ func Run(out io.Writer, workers int,
 		os.Exit(1)
 	}
 
-	// Tools for synchronization
-	// var wg sync.WaitGroup
 	stopWalk := false
-	closeSignalChan := make(chan bool, workers)
-	// ch := make(chan *Entry, 5000)
-	setSignalHandlers(closeSignalChan, workers, &stopWalk, &wg)
-
-	// Spawning routines
-	// wg.Add(workers)
-	// for i := 0; i < workers; i++ {
-	// 	go handler(ch, closeSignalChan, &wg, r)
-	// }
+	setSignalHandlers(&stopWalk)
 
 	// Traversing filepath
 	filepath.Walk(startpath,
@@ -248,15 +197,8 @@ func Run(out io.Writer, workers int,
 
 		})
 
-	// The channel is closed, this communicates that
-	// no more values will be enqueued
-	// close(ch)
-
 	// Waits for goroutines to finish
 	wg.Wait()
-
-	// Ensures signal chan
-	close(closeSignalChan)
 
 	if stopWalk {
 		printHandler("Ended by user", TextMessage)

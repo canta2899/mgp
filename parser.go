@@ -50,12 +50,12 @@ func ParseArgs() *Parameters {
 
 	f := Flags{}
 
-    log.SetFlags(0)
-    log.SetOutput(os.Stdout)
+	log.SetFlags(0)
+	log.SetOutput(os.Stdout)
 
 	printVersion := false
 
-	flag.IntVar(&f.workers, "w", 16, "Defines the number of workers")
+	flag.IntVar(&f.workers, "w", 1000, "Defines the number of workers")
 	flag.BoolVar(&printVersion, "v", false, "Prints current mgp version")
 	flag.IntVar(&f.limitBytes, "l", 100, "File size limit")
 	flag.BoolVar(&f.icase, "i", false, "Performs case insensitive matching")

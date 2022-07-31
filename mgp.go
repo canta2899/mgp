@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"errors"
 	"io"
 	"os"
@@ -16,61 +15,28 @@ var wg sync.WaitGroup
 var sChan chan int
 var m *MessageHandler
 
-type Entry struct {
-	os.FileInfo
-	Path string
-}
-
 // Process path and enqueues if ok for match checking
 func processPath(e *Entry, exc []string, limitMb int, r *regexp.Regexp) error {
-	isdir := (*e).IsDir()
 
-	for _, n := range exc {
-		fullMatch, _ := filepath.Match(n, e.Path)
-		baseMatch, _ := filepath.Match(n, filepath.Base(e.Path))
-		if isdir && (fullMatch || baseMatch) {
-			return filepath.SkipDir
-		}
+	if e.ShouldSkip(exc) {
+		return filepath.SkipDir
 	}
 
-	if isdir || (*e).Size() > int64(limitMb) {
+	if !e.ShouldProcess(limitMb) {
 		return nil
 	}
 
 	wg.Add(1)
 	sChan <- 0
 	go func() {
-		if !(*e).Mode().IsRegular() {
-			return // Skips
+		match, _ := e.HasMatch(r)
+
+		if match {
+			m.printSuccess(e.Path)
 		}
 
-		file, err := os.Open(e.Path)
-
-		if err != nil {
-			return // Skips
-		}
-
-		defer func() {
-			file.Close()
-			<-sChan
-			wg.Done()
-		}()
-
-		bufread := bufio.NewReader(file)
-
-		for {
-			line, err := bufread.ReadBytes('\n')
-
-			if err == io.EOF {
-				break
-			}
-
-			if r.Match(line) {
-				m.printSuccess(e.Path)
-				break
-			}
-		}
-		file.Close()
+		<-sChan
+		wg.Done()
 	}()
 
 	return nil
@@ -87,11 +53,10 @@ func handlePathError(e *Entry, err error) error {
 	m.printError(e.Path)
 	m.printInfo(err.Error())
 
-	if (*e).IsDir() {
+	if e.IsDir() {
 		return filepath.SkipDir
-	} else {
-		return nil
 	}
+	return nil
 }
 
 // Handler for sigterm (ctrl + c from cli)
@@ -142,10 +107,7 @@ func Run(
 				return errors.New("user requested termination")
 			}
 
-			e := &Entry{
-				FileInfo: info,
-				Path:     pathname,
-			}
+			e := NewEntry(info, pathname)
 
 			// Checking permission and access errors
 			if err != nil {

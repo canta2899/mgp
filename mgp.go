@@ -21,13 +21,13 @@ var sChan chan bool
 var m *MessageHandler
 
 // Process path and enqueues if ok for match checking
-func processPath(e *Entry, exc []string, limitMb int, r *regexp.Regexp) error {
+func processPath(e *Entry) error {
 
-	if e.ShouldSkip(exc) {
+	if e.ShouldSkip() {
 		return filepath.SkipDir
 	}
 
-	if !e.ShouldProcess(limitMb) {
+	if !e.ShouldProcess() {
 		return nil
 	}
 
@@ -36,10 +36,10 @@ func processPath(e *Entry, exc []string, limitMb int, r *regexp.Regexp) error {
 	// adds one goroutine to the wait group
 	wg.Add(1)
 	go func() {
-		match, _ := e.HasMatch(r)
+		match, _ := e.HasMatch()
 
 		if match {
-			m.printSuccess(e.Path)
+			m.PrintSuccess(e.Path)
 		}
 
 		// frees one position in the buffer
@@ -54,13 +54,9 @@ func processPath(e *Entry, exc []string, limitMb int, r *regexp.Regexp) error {
 // Evaluates error for path and returns action to perform
 func handlePathError(e *Entry, err error) error {
 
-	if os.IsNotExist(err) {
-		m.printFatal("Invalid path")
-	}
-
 	// Prints error line for current path
-	m.printError(e.Path)
-	m.printInfo(err.Error())
+	m.PrintError(e.Path)
+	m.PrintInfo(err.Error())
 
 	if e.IsDir() {
 		return filepath.SkipDir
@@ -78,6 +74,18 @@ func setSignalHandlers(stopWalk *bool) {
 	}()
 }
 
+func compileRegex(pattern string, caseInsensitive bool) (*regexp.Regexp, error) {
+	if caseInsensitive {
+		pattern = "(?i)" + pattern
+	}
+
+	if r, err := regexp.Compile(pattern); err == nil {
+		return r, nil
+	}
+
+	return nil, errors.New("unable to compile regex pattern")
+}
+
 func Run(
 	out io.Writer,
 	workers int,
@@ -85,24 +93,25 @@ func Run(
 	colors bool,
 	startpath string,
 	pattern string,
-	exludedDirs []string,
+	exc []string,
 	limitMb int) {
 
-	sChan = make(chan bool, workers)
-	m = NewMessageHandler(colors, out)
-
 	// Regex compilation
-	if caseInsensitive {
-		pattern = "(?i)" + pattern
-	}
-	r, err := regexp.Compile(pattern)
+	r, err := compileRegex(pattern, caseInsensitive)
 
 	if err != nil {
-		m.printInfo("Error in regex pattern")
-		os.Exit(1)
+		m.PrintFatal("Invalid regex pattern")
+	}
+
+	if _, err := os.Stat(startpath); os.IsNotExist(err) {
+		m.PrintFatal("Path does not exists")
 	}
 
 	stopWalk := false
+	sChan = make(chan bool, workers)
+	m = NewMessageHandler(colors, out)
+	UpdateMatchingOptions(exc, int64(limitMb), r)
+
 	setSignalHandlers(&stopWalk)
 
 	// Traversing filepath
@@ -125,13 +134,13 @@ func Run(
 
 			// Processes path in search of matches with the given
 			// pattern or the excluded directories
-			return processPath(e, exludedDirs, limitMb, r)
+			return processPath(e)
 		})
 
 	// Waits for goroutines to finish
 	wg.Wait()
 
 	if stopWalk {
-		m.printInfo("Ended by user")
+		m.PrintInfo("Ended by user")
 	}
 }

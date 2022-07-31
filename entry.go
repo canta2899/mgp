@@ -8,6 +8,10 @@ import (
 	"regexp"
 )
 
+var limitMb int64
+var excludedDirs []string
+var pattern *regexp.Regexp
+
 type Entry struct {
 	os.FileInfo
 	Path string
@@ -20,7 +24,7 @@ func NewEntry(info os.FileInfo, path string) *Entry {
 	}
 }
 
-func (e *Entry) ShouldSkip(excludedDirs []string) bool {
+func (e *Entry) ShouldSkip() bool {
 	isDir := e.IsDir()
 
 	for _, n := range excludedDirs {
@@ -34,17 +38,17 @@ func (e *Entry) ShouldSkip(excludedDirs []string) bool {
 	return false
 }
 
-func (e *Entry) ShouldProcess(limitMb int) bool {
+func (e *Entry) ShouldProcess() bool {
 	isDir := e.IsDir()
 
-	if isDir || e.Size() > int64(limitMb) {
+	if isDir || e.Size() > limitMb {
 		return false
 	}
 
 	return true
 }
 
-func (e *Entry) HasMatch(r *regexp.Regexp) (bool, error) {
+func (e *Entry) HasMatch() (bool, error) {
 
 	if !e.Mode().IsRegular() {
 		return false, nil
@@ -67,10 +71,16 @@ func (e *Entry) HasMatch(r *regexp.Regexp) (bool, error) {
 			break
 		}
 
-		if r.Match(line) {
+		if pattern.Match(line) {
 			return true, nil
 		}
 	}
 
 	return false, nil
+}
+
+func UpdateMatchingOptions(exc []string, limit int64, p *regexp.Regexp) {
+	excludedDirs = exc
+	limitMb = limit
+	pattern = p
 }

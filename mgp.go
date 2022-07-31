@@ -11,8 +11,13 @@ import (
 	"syscall"
 )
 
+// WaitGroup for parallel goroutines
 var wg sync.WaitGroup
-var sChan chan int
+
+// Limits the max number of goroutines running
+var sChan chan bool
+
+// Handles outputs
 var m *MessageHandler
 
 // Process path and enqueues if ok for match checking
@@ -26,8 +31,10 @@ func processPath(e *Entry, exc []string, limitMb int, r *regexp.Regexp) error {
 		return nil
 	}
 
+	// hangs if the buffer is full
+	sChan <- true
+	// adds one goroutine to the wait group
 	wg.Add(1)
-	sChan <- 0
 	go func() {
 		match, _ := e.HasMatch(r)
 
@@ -35,7 +42,9 @@ func processPath(e *Entry, exc []string, limitMb int, r *regexp.Regexp) error {
 			m.printSuccess(e.Path)
 		}
 
+		// frees one position in the buffer
 		<-sChan
+		// signals goroutine finished
 		wg.Done()
 	}()
 
@@ -79,7 +88,7 @@ func Run(
 	exludedDirs []string,
 	limitMb int) {
 
-	sChan = make(chan int, workers)
+	sChan = make(chan bool, workers)
 	m = NewMessageHandler(colors, out)
 
 	// Regex compilation

@@ -9,8 +9,8 @@ import (
 )
 
 type MessageHandler struct {
-	coloredOutput bool
-	logger        *log.Logger
+	ColoredOutput bool
+	Logger        *log.Logger
 	Ok            string
 	Ko            string
 	OkColor       func(a ...interface{}) string
@@ -19,8 +19,8 @@ type MessageHandler struct {
 
 func NewMessageHandler(coloredOutput bool, out io.Writer) *MessageHandler {
 	return &MessageHandler{
-		coloredOutput: coloredOutput,
-		logger:        log.New(out, "", 0),
+		ColoredOutput: coloredOutput,
+		Logger:        log.New(out, "", 0),
 		Ok:            string("\u2713"),
 		Ko:            string("\u00D7"),
 		OkColor:       color.New(color.FgHiGreen).SprintFunc(),
@@ -28,30 +28,30 @@ func NewMessageHandler(coloredOutput bool, out io.Writer) *MessageHandler {
 	}
 }
 
-func printNoColor(message ...string) {
-	log.Println(message)
+func (m *MessageHandler) printNoColor(message ...string) {
+	m.Logger.Println(message)
 }
 
 func (m *MessageHandler) PrintSuccess(message ...string) {
-	if m.coloredOutput {
-		log.Printf("%v %v\n", m.OkColor(m.Ok), strings.Join(message, " "))
+	if m.ColoredOutput {
+		m.Logger.Printf("%v %v\n", m.OkColor(m.Ok), strings.Join(message, " "))
 	} else {
-		printNoColor(message...)
+		m.printNoColor(message...)
 	}
 }
 
 func (m *MessageHandler) PrintError(message ...string) {
-	if m.coloredOutput {
-		log.Printf("%v %v\n", m.KoColor(m.Ko), strings.Join(message, " "))
+	if m.ColoredOutput {
+		m.Logger.Printf("%v %v\n", m.KoColor(m.Ko), strings.Join(message, " "))
 	} else {
-		printNoColor(message...)
+		m.printNoColor(message...)
 	}
 }
 
 func (m *MessageHandler) PrintFatal(message ...string) {
-	log.Fatal(strings.Join(message, " "))
+	m.Logger.Fatal(strings.Join(message, " "))
 }
 
 func (m *MessageHandler) PrintInfo(message ...string) {
-	printNoColor(message...)
+	m.printNoColor(message...)
 }

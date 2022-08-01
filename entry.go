@@ -5,20 +5,17 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
 )
 
-var limitMb int64
-var excludedDirs []string
-var pattern *regexp.Regexp
-
 type Entry struct {
+	env *Env
 	os.FileInfo
 	Path string
 }
 
-func NewEntry(info os.FileInfo, path string) *Entry {
+func (env *Env) NewEntry(info os.FileInfo, path string) *Entry {
 	return &Entry{
+		env:      env,
 		FileInfo: info,
 		Path:     path,
 	}
@@ -27,7 +24,7 @@ func NewEntry(info os.FileInfo, path string) *Entry {
 func (e *Entry) ShouldSkip() bool {
 	isDir := e.IsDir()
 
-	for _, n := range excludedDirs {
+	for _, n := range e.env.exclude {
 		fullMatch, _ := filepath.Match(n, e.Path)
 		baseMatch, _ := filepath.Match(n, filepath.Base(e.Path))
 		if isDir && (fullMatch || baseMatch) {
@@ -41,7 +38,7 @@ func (e *Entry) ShouldSkip() bool {
 func (e *Entry) ShouldProcess() bool {
 	isDir := e.IsDir()
 
-	if isDir || e.Size() > limitMb {
+	if isDir || e.Size() > int64(e.env.limitBytes) {
 		return false
 	}
 
@@ -71,16 +68,10 @@ func (e *Entry) HasMatch() (bool, error) {
 			break
 		}
 
-		if pattern.Match(line) {
+		if e.env.pattern.Match(line) {
 			return true, nil
 		}
 	}
 
 	return false, nil
-}
-
-func UpdateMatchingOptions(exc []string, limit int64, p *regexp.Regexp) {
-	excludedDirs = exc
-	limitMb = limit
-	pattern = p
 }

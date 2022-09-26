@@ -11,11 +11,13 @@ import (
 )
 
 type env struct {
-	wg      sync.WaitGroup
-	sChan   chan bool
-	msg     *MessageHandler
-	params  *Parameters
-	pattern *regexp.Regexp
+	wg         sync.WaitGroup
+	sChan      chan bool
+	msg        *MessageHandler
+	pattern    *regexp.Regexp
+	startpath  string
+	exclude    []string
+	limitBytes int
 }
 
 // Process path and enqueues if ok for match checking
@@ -74,17 +76,16 @@ func setSignalHandlers(stopWalk *bool) {
 
 func (env *env) Run() {
 
-	if _, err := os.Stat(env.params.startpath); os.IsNotExist(err) {
+	if _, err := os.Stat(env.startpath); os.IsNotExist(err) {
 		env.msg.PrintFatal("Path does not exists")
 	}
 
 	stopWalk := false
-	UpdateMatchingOptions(env.params.GetExcludedDirs(), int64(env.params.limitBytes), env.pattern)
 
 	setSignalHandlers(&stopWalk)
 
 	// Traversing filepath
-	filepath.Walk(env.params.startpath,
+	filepath.Walk(env.startpath,
 
 		func(pathname string, info os.FileInfo, err error) error {
 
@@ -94,7 +95,7 @@ func (env *env) Run() {
 				return errors.New("user requested termination")
 			}
 
-			e := NewEntry(info, pathname)
+			e := env.NewEntry(info, pathname)
 
 			// Checking permission and access errors
 			if err != nil {

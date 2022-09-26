@@ -3,19 +3,19 @@ package main
 import (
 	"bytes"
 	"io"
-	"path/filepath"
+	"log"
 	"strings"
 	"sync"
 	"testing"
 )
 
 func IsPathExpected(expected []string, current string) bool {
-	currentAbs, _ := filepath.Abs(filepath.Clean(current))
+	// currentAbs, _ := filepath.Abs(filepath.Clean(current))
 
 	for _, entry := range expected {
-		expectedAbs, _ := filepath.Abs(filepath.Clean(entry))
+		// expectedAbs, _ := filepath.Abs(filepath.Clean(entry))
 
-		if expectedAbs == currentAbs {
+		if entry == current {
 			return true
 		}
 	}
@@ -29,51 +29,50 @@ func TestValidMatches(t *testing.T) {
 	var buf bytes.Buffer
 
 	expectedOutputs := map[string][]string{
-		"level1": {"./test/data.txt"},
-		"level2": {"./test/level2/data.txt"},
-		"level3": {"./test/level3/data.txt"},
+		"level1": {"testdata/data.txt"},
+		"level2": {"testdata/level2/data.txt"},
+		"level3": {"testdata/level3/data.txt"},
 	}
 
 	for key, expected := range expectedOutputs {
 
-		params := &Parameters{
-			startpath: "./test",
-			pattern:   key,
-			Flags: &Flags{
-				workers: 16,
-				nocolor: true,
-				icase:   false,
-				exclude: ".bzr,CVS,.git,.hg,.svn,.idea,.tox"},
-		}
-	}
-
-	env := &env{
-		wg:      sync.WaitGroup{},
-		sChan:   make(chan bool),
-		msg:     handler,
-		params:  params,
-		pattern: pattern,
-	}
-
-	Run(&buf, 16, false, false, "./test", key, []string{".bzr", "CVS", ".git", ".hg", ".svn", ".idea", ".tox"}, limit)
-
-	for {
-		line, err := buf.ReadBytes('\n')
-
-		obtained := strings.TrimSuffix(string(line), "\n")
-
-		if err == io.EOF {
-			break
-		}
+		pattern, err := compileRegex(key, false)
 
 		if err != nil {
-			t.Error("Error while reading command output")
+			t.Fatal("Error compiling regexp")
 		}
 
-		if !IsPathExpected(expected, obtained) {
-			t.Errorf("%v is not expected. Output should contain %v\n", string(line), expected)
+		env := &env{
+			wg:         sync.WaitGroup{},
+			sChan:      make(chan bool, 16),
+			msg:        NewMessageHandler(false, &buf),
+			pattern:    pattern,
+			startpath:  "./testdata",
+			exclude:    []string{".bzr", "CVS", ".git", ".hg", ".svn", ".idea", ".tox"},
+			limitBytes: limit,
 		}
 
+		env.Run()
+
+		log.Println("here")
+
+		for {
+			line, err := buf.ReadBytes('\n')
+
+			if err == io.EOF {
+				break
+			}
+
+			obtained := strings.TrimSuffix(string(line), "\n")
+
+			if err != nil {
+				t.Error("Error while reading command output")
+			}
+
+			if !IsPathExpected(expected, obtained) {
+				t.Errorf("%v is not expected. Output should contain %v\n", obtained, expected)
+			}
+
+		}
 	}
-
 }

@@ -31,12 +31,16 @@ func main() {
 	}
 
 	env := &env{
-		wg:      sync.WaitGroup{},
-		sChan:   make(chan bool),
-		msg:     handler,
-		params:  params,
-		pattern: pattern,
+		wg:         sync.WaitGroup{},
+		sChan:      make(chan bool, params.workers),
+		msg:        handler,
+		pattern:    pattern,
+		startpath:  params.startpath,
+		exclude:    params.GetExcludedDirs(),
+		limitBytes: params.limitBytes,
 	}
+
+	log.Print("ready")
 
 	env.Run()
 }

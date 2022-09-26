@@ -5,6 +5,7 @@ import (
 	"io"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -35,26 +36,44 @@ func TestValidMatches(t *testing.T) {
 
 	for key, expected := range expectedOutputs {
 
-		Run(&buf, 16, false, false, "./test", key, []string{".bzr", "CVS", ".git", ".hg", ".svn", ".idea", ".tox"}, limit)
+		params := &Parameters{
+			startpath: "./test",
+			pattern:   key,
+			Flags: &Flags{
+				workers: 16,
+				nocolor: true,
+				icase:   false,
+				exclude: ".bzr,CVS,.git,.hg,.svn,.idea,.tox"},
+		}
+	}
 
-		for {
-			line, err := buf.ReadBytes('\n')
+	env := &env{
+		wg:      sync.WaitGroup{},
+		sChan:   make(chan bool),
+		msg:     handler,
+		params:  params,
+		pattern: pattern,
+	}
 
-			obtained := strings.TrimSuffix(string(line), "\n")
+	Run(&buf, 16, false, false, "./test", key, []string{".bzr", "CVS", ".git", ".hg", ".svn", ".idea", ".tox"}, limit)
 
-			if err == io.EOF {
-				break
-			}
+	for {
+		line, err := buf.ReadBytes('\n')
 
-			if err != nil {
-				t.Error("Error while reading command output")
-			}
+		obtained := strings.TrimSuffix(string(line), "\n")
 
-			if !IsPathExpected(expected, obtained) {
-				t.Errorf("%v is not expected. Output should contain %v\n", string(line), expected)
-			}
+		if err == io.EOF {
+			break
+		}
 
+		if err != nil {
+			t.Error("Error while reading command output")
+		}
+
+		if !IsPathExpected(expected, obtained) {
+			t.Errorf("%v is not expected. Output should contain %v\n", string(line), expected)
 		}
 
 	}
+
 }

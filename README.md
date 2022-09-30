@@ -38,7 +38,7 @@ Two parameters are required
 
 These can be specified as positional arguments like in grep. Moreover, additional flags can be specified before the pattern and the starting path. These allow to: 
 
-- Exclude specific path or directories `-e "path1,path2,path3"` 
+- Exclude specific path or directories `-exc "path1,path2,path3"` 
 - Specify a size limit (in Megabytes) in order to exclude big files `-lim 800`
 - Specify the maximum number of goroutines that can run simultaneously `-w 100`
 - Disable the colored output `-raw`

@@ -66,7 +66,7 @@ func (env *Env) Run() {
 				// stops and the function returns with an error
 				return errors.New("user requested termination")
 			}
-			e := env.NewEntry(info, pathname)
+			e := NewEntry(info, pathname, env)
 
 			// Checking permission and access errors
 			if err != nil {

@@ -13,7 +13,7 @@ type Entry struct {
 	Path string
 }
 
-func (env *Env) NewEntry(info os.FileInfo, path string) *Entry {
+func NewEntry(info os.FileInfo, path string, env *Env) *Entry {
 	return &Entry{
 		env:      env,
 		FileInfo: info,

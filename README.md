@@ -39,9 +39,9 @@ Two parameters are required
 These can be specified as positional arguments like in grep. Moreover, additional flags can be specified before the pattern and the starting path. These allow to: 
 
 - Exclude specific path or directories `-e "path1,path2,path3"` 
-- Specify a size limit (in Megabytes) in order to exclude big files `-l 800`
+- Specify a size limit (in Megabytes) in order to exclude big files `-lim 800`
 - Specify the maximum number of goroutines that can run simultaneously `-w 100`
-- Disable the colored output `-c`
+- Disable the colored output `-raw`
 - Perform case insensitive matching `-i`
 
 ### Examples
@@ -61,13 +61,13 @@ mgp -i music .
 Here's an example that searches for the word *Panda* recursively starting from the current directory and ignoring directories named *not-me* at any level.
 
 ```sh
-mgp -e "not-me" Panda . 
+mgp -exc "not-me" Panda . 
 ```
 
 Here's, instead, an example that searches for the word *Node* and the word *node* recursively starting from the */home/user/* path and specifically ignoring the */home/user/.local/bin* directory and directories named *.git* at any level.
 
 ```sh
-mgp -e ".git,/home/user.local/bin" "[Nn]ode" /home/user/ 
+mgp -exc ".git,/home/user.local/bin" "[Nn]ode" /home/user/ 
 ```
 
 <p align="center">

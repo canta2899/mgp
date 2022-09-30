@@ -53,10 +53,10 @@ func ParseArgs() *Parameters {
 
 	flag.IntVar(&f.workers, "w", 100, "Defines the max number of routines running at the same time")
 	flag.BoolVar(&printVersion, "v", false, "Prints current mgp version")
-	flag.IntVar(&f.limitBytes, "l", 100, "File size limit")
+	flag.IntVar(&f.limitBytes, "lim", 100, "File size limit")
 	flag.BoolVar(&f.icase, "i", false, "Performs case insensitive matching")
-	flag.BoolVar(&f.nocolor, "c", false, "Disable colored output")
-	flag.StringVar(&f.exclude, "e", "", "Excluded paths (specified as a comma separated list like \"path1,path2\")")
+	flag.BoolVar(&f.nocolor, "raw", false, "Disable colored output")
+	flag.StringVar(&f.exclude, "exc", "", "Excluded paths (specified as a comma separated list like \"path1,path2\")")
 
 	f.limitBytes = f.limitBytes * MEGABYTE
 

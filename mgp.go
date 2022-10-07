@@ -7,7 +7,7 @@ import (
 )
 
 // Process path and enqueues if ok for match checking
-func (env *Env) processPath(e *Entry) error {
+func (env *Env) processEntry(e *Entry) error {
 
 	if e.ShouldSkip() {
 		return filepath.SkipDir
@@ -25,7 +25,7 @@ func (env *Env) processPath(e *Entry) error {
 		match, _ := e.HasMatch()
 
 		if match {
-			env.msg.PrintSuccess(e.Path)
+			env.msg.PrintSuccess(e.GetPath())
 		}
 
 		// frees one position in the buffer
@@ -38,13 +38,13 @@ func (env *Env) processPath(e *Entry) error {
 }
 
 // Evaluates error for path and returns action to perform
-func (env *Env) handlePathError(e *Entry, err error) error {
+func (env *Env) handleEntryError(e *Entry, err error) error {
 
 	// Prints error line for current path
-	env.msg.PrintError(e.Path)
+	env.msg.PrintError(e.GetPath())
 	env.msg.PrintInfo(err.Error())
 
-	if e.IsDir() {
+	if e.node.IsDir() {
 		return filepath.SkipDir
 	}
 	return nil
@@ -70,12 +70,12 @@ func (env *Env) Run() {
 
 			// Checking permission and access errors
 			if err != nil {
-				return env.handlePathError(e, err)
+				return env.handleEntryError(e, err)
 			}
 
 			// Processes path in search of matches with the given
 			// pattern or the excluded directories
-			return env.processPath(e)
+			return env.processEntry(e)
 		})
 
 	// Waits for goroutines to finish

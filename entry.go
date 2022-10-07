@@ -9,24 +9,29 @@ import (
 
 type Entry struct {
 	env *Env
-	os.FileInfo
-	Path string
+	node *FileInfo
 }
 
 func NewEntry(info os.FileInfo, path string, env *Env) *Entry {
 	return &Entry{
-		env:      env,
-		FileInfo: info,
-		Path:     path,
+		env:  env,
+		node: &FileInfo{
+            FileInfo: info,
+            Path: path,
+        },
 	}
 }
 
+func (e *Entry) GetPath() string {
+    return e.node.Path
+}
+
 func (e *Entry) ShouldSkip() bool {
-	isDir := e.IsDir()
+	isDir := e.node.IsDir()
 
 	for _, n := range e.env.exclude {
-		fullMatch, _ := filepath.Match(n, e.Path)
-		baseMatch, _ := filepath.Match(n, filepath.Base(e.Path))
+		fullMatch, _ := filepath.Match(n, e.node.Path)
+		baseMatch, _ := filepath.Match(n, filepath.Base(e.node.Path))
 		if isDir && (fullMatch || baseMatch) {
 			return true
 		}
@@ -36,9 +41,9 @@ func (e *Entry) ShouldSkip() bool {
 }
 
 func (e *Entry) ShouldProcess() bool {
-	isDir := e.IsDir()
+	isDir := e.node.IsDir()
 
-	if isDir || e.Size() > int64(e.env.limitBytes) {
+	if isDir || e.node.Size() > int64(e.env.limitBytes) {
 		return false
 	}
 
@@ -47,11 +52,11 @@ func (e *Entry) ShouldProcess() bool {
 
 func (e *Entry) HasMatch() (bool, error) {
 
-	if !e.Mode().IsRegular() {
+	if !e.node.Mode().IsRegular() {
 		return false, nil
 	}
 
-	file, err := os.Open(e.Path)
+	file, err := os.Open(e.node.Path)
 
 	if err != nil {
 		return false, err

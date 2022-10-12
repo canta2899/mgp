@@ -3,7 +3,7 @@ package main
 import "os"
 
 type FileInfo struct {
-    os.FileInfo
-    Path string
+  os.FileInfo
+  Path string
 }
 

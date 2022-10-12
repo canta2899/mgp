@@ -1,17 +1,17 @@
 package main
 
 import (
-	"regexp"
-	"sync"
+  "regexp"
+  "sync"
 )
 
 type Env struct {
-	wg         sync.WaitGroup
-	sChan      chan bool
-	stopWalk   *bool
-	msg        OutputHandler
-	pattern    *regexp.Regexp
-	startpath  string
-	exclude    []string
-	limitBytes int
+  wg         sync.WaitGroup
+  sChan      chan bool
+  stopWalk   *bool
+  msg        OutputHandler
+  pattern    *regexp.Regexp
+  startpath  string
+  exclude    []string
+  limitBytes int
 }

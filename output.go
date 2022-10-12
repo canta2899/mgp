@@ -7,6 +7,9 @@ import (
 	"github.com/fatih/color"
 )
 
+var okColor = color.New(color.FgHiGreen).SprintFunc()
+var koColor = color.New(color.FgRed).SprintFunc()
+
 type OutputHandler interface {
   AddMatch(path string)
   AddPathError(path string)
@@ -21,21 +24,27 @@ type FmtOutputHandler struct {
 	KoColor       func(a ...interface{}) string
 }
 
-func NewFmtOutputHandler() *FmtOutputHandler {
+func NewFmtOutputHandler(colored bool) *FmtOutputHandler {
+  var olog, elog *log.Logger
+  
+  if colored {
+    olog = log.New(os.Stdout, okColor(string("\u2713" + " ")), 0)
+    elog = log.New(os.Stderr, koColor(string("\u00D7" + " ")), 0)
+  } else {
+    olog = log.New(os.Stdout, "", 0)
+    elog = log.New(os.Stderr, "", 0)
+  }
+
 	return &FmtOutputHandler{
-		Logger:        log.New(os.Stdout, "", 0),
-    ErrorLogger:   log.New(os.Stderr, "", 0),
-		Ok:            string("\u2713"),
-		Ko:            string("\u00D7"),
-		OkColor:       color.New(color.FgHiGreen).SprintFunc(),
-		KoColor:       color.New(color.FgRed).SprintFunc(),
+    Logger: olog,
+    ErrorLogger: elog,
 	}
 }
 
 func (f *FmtOutputHandler) AddMatch(path string) {
-
+  f.Logger.Println(path)
 }
 
 func (f *FmtOutputHandler) AddPathError(path string) {
-
+  f.ErrorLogger.Println(path)
 }

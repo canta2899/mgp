@@ -25,7 +25,7 @@ func (env *Env) processEntry(e *Entry) error {
 		match, _ := e.HasMatch()
 
 		if match {
-			env.msg.PrintSuccess(e.GetPath())
+			env.msg.AddMatch(e.GetPath())
 		}
 
 		// frees one position in the buffer
@@ -41,8 +41,8 @@ func (env *Env) processEntry(e *Entry) error {
 func (env *Env) handleEntryError(e *Entry, err error) error {
 
 	// Prints error line for current path
-	env.msg.PrintError(e.GetPath())
-	env.msg.PrintInfo(err.Error())
+	env.msg.AddPathError(e.GetPath())
+	env.msg.AddPathError(err.Error())
 
 	if e.node.IsDir() {
 		return filepath.SkipDir
@@ -53,7 +53,8 @@ func (env *Env) handleEntryError(e *Entry, err error) error {
 func (env *Env) Run() {
 
 	if _, err := os.Stat(env.startpath); os.IsNotExist(err) {
-		env.msg.PrintFatal("Path does not exists")
+		env.msg.AddPathError("Path does not exists")
+    os.Exit(1)
 	}
 
 	// Traversing filepath
@@ -80,8 +81,4 @@ func (env *Env) Run() {
 
 	// Waits for goroutines to finish
 	env.wg.Wait()
-
-	if *env.stopWalk {
-		env.msg.PrintInfo("Ended by user")
-	}
 }

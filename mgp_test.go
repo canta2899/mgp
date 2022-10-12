@@ -47,7 +47,7 @@ func TestValidMatches(t *testing.T) {
 		env := &Env{
 			wg:         sync.WaitGroup{},
 			sChan:      make(chan bool, 16),
-			msg:        NewMessageHandler(false, &buf),
+			msg:        NewFmtOutputHandler(false),
 			pattern:    pattern,
 			stopWalk:   &stopWalk,
 			startpath:  "./testdata",

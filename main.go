@@ -34,7 +34,8 @@ func setSignalHandlers(stopWalk *bool) {
 func main() {
 
 	params := ParseArgs()
-	handler := NewMessageHandler(!params.nocolor, os.Stdout)
+	// handler := NewMessageHandler(!params.nocolor, os.Stdout)
+  handler := NewFmtOutputHandler(true)
 	pattern, err := compileRegex(params.pattern, params.icase)
 
 	if err != nil {

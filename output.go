@@ -70,23 +70,3 @@ func (f *TestOutputHandler) AddPathError(path string) {
   f.Errors = append(f.Errors, path)
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

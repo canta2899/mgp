@@ -48,3 +48,45 @@ func (f *FmtOutputHandler) AddMatch(path string) {
 func (f *FmtOutputHandler) AddPathError(path string) {
   f.ErrorLogger.Println(path)
 }
+
+
+type TestOutputHandler struct {
+  Matches []string 
+  Errors  []string
+}
+
+func NewTestOutputHandler() *TestOutputHandler {
+  return &TestOutputHandler{
+    Matches: []string{},
+    Errors:  []string{},
+  }
+}
+
+func (f *TestOutputHandler) AddMatch(path string) {
+  f.Matches = append(f.Matches, path)
+}
+
+func (f *TestOutputHandler) AddPathError(path string) {
+  f.Errors = append(f.Errors, path)
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

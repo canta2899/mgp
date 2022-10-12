@@ -1,15 +1,13 @@
 package main
 
 import (
-	"bytes"
-	"io"
 	"path/filepath"
-	"strings"
 	"sync"
 	"testing"
 )
 
 func IsPathExpected(expected []string, current string) bool {
+  // todo should abs path be used for safety? 
 	// currentAbs, _ := filepath.Abs(filepath.Clean(current))
 
 	for _, entry := range expected {
@@ -26,8 +24,6 @@ func TestValidMatches(t *testing.T) {
 
 	limit := 1048576 * 500
 
-	var buf bytes.Buffer
-
 	expectedOutputs := map[string][]string{
 		"level1": {filepath.Join("testdata", "data.txt")},
 		"level2": {filepath.Join("testdata", "level2", "data.txt")},
@@ -37,6 +33,7 @@ func TestValidMatches(t *testing.T) {
 	for key, expected := range expectedOutputs {
 
 		pattern, err := compileRegex(key, false)
+    handler := NewTestOutputHandler()
 
 		if err != nil {
 			t.Fatal("Error compiling regexp")
@@ -47,7 +44,7 @@ func TestValidMatches(t *testing.T) {
 		env := &Env{
 			wg:         sync.WaitGroup{},
 			sChan:      make(chan bool, 16),
-			msg:        NewFmtOutputHandler(false),
+			msg:        handler,
 			pattern:    pattern,
 			stopWalk:   &stopWalk,
 			startpath:  "./testdata",
@@ -57,23 +54,11 @@ func TestValidMatches(t *testing.T) {
 
 		env.Run()
 
-		for {
-			line, err := buf.ReadBytes('\n')
+    for _, value := range handler.Matches {
+      if !IsPathExpected(expected, value) {
+        t.Fatalf("%v is not expected. Output should contain %v\n", value, expected)
+      }
+    }
 
-			if err == io.EOF {
-				break
-			}
-
-			obtained := strings.TrimSuffix(string(line), "\n")
-
-			if err != nil {
-				t.Error("Error while reading command output")
-			}
-
-			if !IsPathExpected(expected, obtained) {
-				t.Errorf("%v is not expected. Output should contain %v\n", obtained, expected)
-			}
-
-		}
 	}
 }

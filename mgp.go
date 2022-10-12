@@ -1,6 +1,7 @@
 package main
 
 import (
+  "fmt"
   "errors"
   "os"
   "path/filepath"
@@ -37,19 +38,6 @@ func (env *Env) processEntry(e *Entry) error {
   return nil
 }
 
-// Evaluates error for path and returns action to perform
-func (env *Env) handleEntryError(e *Entry, err error) error {
-
-  // Prints error line for current path
-  env.msg.AddPathError(e.GetPath())
-  env.msg.AddPathError(err.Error())
-
-  if e.node.IsDir() {
-    return filepath.SkipDir
-  }
-  return nil
-}
-
 func (env *Env) Run() {
 
   if _, err := os.Stat(env.startpath); os.IsNotExist(err) {
@@ -69,14 +57,20 @@ func (env *Env) Run() {
     }
     e := NewEntry(info, pathname, env)
 
-    // Checking permission and access errors
-    if err != nil {
-      return env.handleEntryError(e, err)
-    }
-
     // Processes path in search of matches with the given
     // pattern or the excluded directories
-    return env.processEntry(e)
+    if err == nil {
+      return env.processEntry(e)
+    }
+
+    // Checking permission and access errors
+    env.msg.AddPathError(fmt.Sprintf("%v: %v", e.GetPath(), err.Error()))
+
+    if e.node.IsDir() {
+      return filepath.SkipDir
+    }
+
+    return nil 
   })
 
 // Waits for goroutines to finish

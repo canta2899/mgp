@@ -1,7 +1,6 @@
 package main
 
 import (
-  "fmt"
   "errors"
   "os"
   "path/filepath"
@@ -23,10 +22,18 @@ func (env *Env) processEntry(e *Entry) error {
   // adds one goroutine to the wait group
   env.wg.Add(1)
   go func() {
-    match, _ := e.HasMatch()
+    if env.matchContext {
+      match, err := e.MatchAll()
+      
+      if err == nil && match != nil {
+        env.msg.AddMatches(e.GetPath(), match)
+      }
+    } else {
+      singleMatch, err := e.MatchFirst()
 
-    if match {
-      env.msg.AddMatch(e.GetPath())
+      if err == nil && singleMatch != nil {
+        env.msg.AddMatch(e.GetPath(), singleMatch)
+      }
     }
 
     // frees one position in the buffer
@@ -41,7 +48,7 @@ func (env *Env) processEntry(e *Entry) error {
 func (env *Env) Run() {
 
   if _, err := os.Stat(env.startpath); os.IsNotExist(err) {
-    env.msg.AddPathError("Path does not exists")
+    env.msg.AddPathError(env.startpath, errors.New("path does not exists"))
     os.Exit(1)
   }
 
@@ -64,7 +71,7 @@ func (env *Env) Run() {
     }
 
     // Checking permission and access errors
-    env.msg.AddPathError(fmt.Sprintf("%v: %v", e.GetPath(), err.Error()))
+    env.msg.AddPathError(e.GetPath(), err)
 
     if e.node.IsDir() {
       return filepath.SkipDir

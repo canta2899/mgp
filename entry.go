@@ -1,10 +1,11 @@
 package main
 
 import (
-  "bufio"
-  "io"
-  "os"
-  "path/filepath"
+	"bufio"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
 )
 
 type Entry struct {
@@ -50,21 +51,59 @@ func (e *Entry) ShouldProcess() bool {
   return true
 }
 
-func (e *Entry) HasMatch() (bool, error) {
+func (e *Entry) MatchFirst() (*Match, error) {
 
   if !e.node.Mode().IsRegular() {
-    return false, nil
+    return nil, nil
   }
 
   file, err := os.Open(e.node.Path)
 
   if err != nil {
-    return false, err
+    return nil, err
   }
 
   defer file.Close()
 
   bufread := bufio.NewReader(file)
+
+  count := 1
+  for {
+    line, err := bufread.ReadBytes('\n')
+
+    if err == io.EOF {
+      break
+    }
+
+    if e.env.pattern.Match(line) {
+      return &Match{LineNumber: count, Content: formatMatchLine(string(line))}, nil
+    }
+    count += 1
+  }
+
+	return nil, nil
+}
+
+func (e *Entry) MatchAll() ([]*Match, error) {
+
+  var m []*Match = nil
+
+  if !e.node.Mode().IsRegular() {
+    return m, nil
+  }
+
+  file, err := os.Open(e.node.Path)
+
+  if err != nil {
+    return m, err
+  }
+
+  defer file.Close()
+
+  bufread := bufio.NewReader(file)
+
+  m = []*Match{}
+  count := 1
 
   for {
     line, err := bufread.ReadBytes('\n')
@@ -74,9 +113,19 @@ func (e *Entry) HasMatch() (bool, error) {
     }
 
     if e.env.pattern.Match(line) {
-      return true, nil
+      m = append(m, &Match{ 
+        LineNumber: count, 
+        Content:    formatMatchLine(string(line)),
+      })
     }
+
+    count += 1
   }
 
-  return false, nil
+  return m, nil
 }
+
+func formatMatchLine(line string) string {
+  return strings.TrimSpace(strings.Trim(line, "\t"))
+}
+

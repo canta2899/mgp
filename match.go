@@ -1,23 +1,14 @@
 package main
 
-import (
-  "strconv"
-)
-
 type Match struct {
-  Path    string
-  Context map[string]string
+  LineNumber int 
+  Content    string
 }
 
-func NewMatch(path string) *Match {
+func NewMatch(line int, content string) *Match {
   return &Match{
-    Path: path,
-    Context: nil,
+    LineNumber: line,
+    Content:   content, 
   }
-}
-
-func (m *Match) AddContext(lineNumb int, content string) {
-  lineNumbStr := strconv.Itoa(lineNumb)
-  m.Context[lineNumbStr] = content
 }
 

@@ -14,11 +14,12 @@ const PROG_NAME = "mgp"
 var STD_EXC_DIRS = []string{".bzr", "CVS", ".git", ".hg", ".svn", ".idea", ".tox"}
 
 type Flags struct {
-  workers    int
-  nocolor    bool
-  icase      bool
-  exclude    string
-  limitBytes int
+  workers      int
+  nocolor      bool
+  icase        bool
+  exclude      string
+  limitBytes   int
+  matchContext bool
 }
 
 func (f *Flags) GetExcludedDirs() []string {
@@ -57,6 +58,7 @@ func ParseArgs() *Parameters {
   flag.BoolVar(&f.icase, "i", false, "Performs case insensitive matching")
   flag.BoolVar(&f.nocolor, "raw", false, "Disable colored output")
   flag.StringVar(&f.exclude, "exc", "", "Excluded paths (specified as a comma separated list like \"path1,path2\")")
+  flag.BoolVar(&f.matchContext, "ctx", false, "Print every match for a file")
 
   f.limitBytes = f.limitBytes * MEGABYTE
 

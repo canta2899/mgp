@@ -1,10 +1,11 @@
-package main
+package output
 
 import (
 	"fmt"
 	"log"
 	"os"
 
+  "github.com/canta2899/mgp/model"
 	"github.com/fatih/color"
 )
 
@@ -12,8 +13,8 @@ var okColor = color.New(color.FgHiGreen).SprintFunc()
 var koColor = color.New(color.FgRed).SprintFunc()
 
 type OutputHandler interface {
-  AddMatch(path string, match *Match)
-  AddMatches(path string, matches []*Match)
+  AddMatch(path string, match *model.Match)
+  AddMatches(path string, matches []*model.Match)
   AddPathError(path string, e error)
 }
 
@@ -43,11 +44,11 @@ func NewFmtOutputHandler(colored bool) *FmtOutputHandler {
   }
 }
 
-func (f *FmtOutputHandler) AddMatch(path string, match *Match) {
+func (f *FmtOutputHandler) AddMatch(path string, match *model.Match) {
   f.Logger.Println(path)
 }
 
-func (f *FmtOutputHandler) AddMatches(path string, matches []*Match) {
+func (f *FmtOutputHandler) AddMatches(path string, matches []*model.Match) {
   for _, m := range matches {
     f.Logger.Println((fmt.Sprintf("%v:%v:  %v", path, m.LineNumber, m.Content)))
   }
@@ -70,11 +71,11 @@ func NewTestOutputHandler() *TestOutputHandler {
   }
 }
 
-func (f *TestOutputHandler) AddMatch(path string, match *Match) {
+func (f *TestOutputHandler) AddMatch(path string, match *model.Match) {
   f.Matches = append(f.Matches, path)
 }
 
-func (f *TestOutputHandler) AddMatches(path string, matches []*Match) {
+func (f *TestOutputHandler) AddMatches(path string, matches []*model.Match) {
   f.Matches = append(f.Matches, path) 
 }
 

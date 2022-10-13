@@ -1,10 +1,26 @@
-package main
+package traverse
 
 import (
+	"errors"
 	"path/filepath"
+	"regexp"
 	"sync"
 	"testing"
+
+	"github.com/canta2899/mgp/output"
 )
+
+func compileRegex(pattern string, caseInsensitive bool) (*regexp.Regexp, error) {
+  if caseInsensitive {
+    pattern = "(?i)" + pattern
+  }
+
+  if r, err := regexp.Compile(pattern); err == nil {
+    return r, nil
+  }
+
+  return nil, errors.New("unable to compile regex pattern")
+}
 
 func IsPathExpected(expected []string, current string) bool {
   // todo should abs path be used for safety? 
@@ -33,7 +49,7 @@ func TestValidMatches(t *testing.T) {
 	for key, expected := range expectedOutputs {
 
 		pattern, err := compileRegex(key, false)
-    handler := NewTestOutputHandler()
+    handler := output.NewTestOutputHandler()
 
 		if err != nil {
 			t.Fatal("Error compiling regexp")
@@ -42,14 +58,14 @@ func TestValidMatches(t *testing.T) {
 		stopWalk := false
 
 		env := &Env{
-			wg:         sync.WaitGroup{},
-			sChan:      make(chan bool, 16),
-			msg:        handler,
-			pattern:    pattern,
-			stopWalk:   &stopWalk,
-			startpath:  "./testdata",
-			exclude:    []string{".bzr", "CVS", ".git", ".hg", ".svn", ".idea", ".tox"},
-			limitBytes: limit,
+			Wg:         sync.WaitGroup{},
+			Schan:      make(chan bool, 16),
+			Msg:        handler,
+			Pattern:    pattern,
+			StopWalk:   &stopWalk,
+			StartPath:  "./testdata",
+			Exclude:    []string{".bzr", "CVS", ".git", ".hg", ".svn", ".idea", ".tox"},
+			LimitBytes: limit,
 		}
 
 		env.Run()

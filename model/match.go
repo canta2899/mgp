@@ -1,4 +1,4 @@
-package main
+package model
 
 type Match struct {
   LineNumber int 

@@ -1,4 +1,4 @@
-package main
+package traverse
 
 import (
   "errors"
@@ -7,7 +7,7 @@ import (
 )
 
 // Process path and enqueues if ok for match checking
-func (env *Env) processEntry(e *Entry) error {
+func (en *Env) ProcessEntry(e *Entry) error {
 
   if e.ShouldSkip() {
     return filepath.SkipDir
@@ -18,62 +18,62 @@ func (env *Env) processEntry(e *Entry) error {
   }
 
   // hangs if the buffer is full
-  env.sChan <- true
+  en.Schan <- true
   // adds one goroutine to the wait group
-  env.wg.Add(1)
+  en.Wg.Add(1)
   go func() {
-    if env.matchContext {
+    if en.MatchContext {
       match, err := e.MatchAll()
       
       if err == nil && match != nil {
-        env.msg.AddMatches(e.GetPath(), match)
+        en.Msg.AddMatches(e.GetPath(), match)
       }
     } else {
       singleMatch, err := e.MatchFirst()
 
       if err == nil && singleMatch != nil {
-        env.msg.AddMatch(e.GetPath(), singleMatch)
+        en.Msg.AddMatch(e.GetPath(), singleMatch)
       }
     }
 
     // frees one position in the buffer
-    <-env.sChan
+    <-en.Schan
     // signals goroutine finished
-    env.wg.Done()
+    en.Wg.Done()
   }()
 
   return nil
 }
 
-func (env *Env) Run() {
+func (en *Env) Run() {
 
-  if _, err := os.Stat(env.startpath); os.IsNotExist(err) {
-    env.msg.AddPathError(env.startpath, errors.New("path does not exists"))
+  if _, err := os.Stat(en.StartPath); os.IsNotExist(err) {
+    en.Msg.AddPathError(en.StartPath, errors.New("path does not exists"))
     os.Exit(1)
   }
 
   // Traversing filepath
-  filepath.Walk(env.startpath,
+  filepath.Walk(en.StartPath,
 
   func(pathname string, info os.FileInfo, err error) error {
 
-    if *env.stopWalk {
+    if *en.StopWalk {
       // If the termination is requested, the path Walking
       // stops and the function returns with an error
       return errors.New("user requested termination")
     }
-    e := NewEntry(info, pathname, env)
+    e := NewEntry(info, pathname, en)
 
     // Processes path in search of matches with the given
     // pattern or the excluded directories
     if err == nil {
-      return env.processEntry(e)
+      return en.ProcessEntry(e)
     }
 
     // Checking permission and access errors
-    env.msg.AddPathError(e.GetPath(), err)
+    en.Msg.AddPathError(e.GetPath(), err)
 
-    if e.node.IsDir() {
+    if e.Node.IsDir() {
       return filepath.SkipDir
     }
 
@@ -81,5 +81,5 @@ func (env *Env) Run() {
   })
 
 // Waits for goroutines to finish
-  env.wg.Wait()
+  en.Wg.Wait()
 }

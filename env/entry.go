@@ -1,4 +1,4 @@
-package main
+package traverse
 
 import (
 	"bufio"
@@ -6,17 +6,18 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+  "github.com/canta2899/mgp/model"
 )
 
 type Entry struct {
-  env *Env
-  node *FileInfo
+  env  *Env
+  Node *model.FileInfo
 }
 
 func NewEntry(info os.FileInfo, path string, env *Env) *Entry {
   return &Entry{
     env:  env,
-    node: &FileInfo{
+    Node: &model.FileInfo{
       FileInfo: info,
       Path: path,
     },
@@ -24,16 +25,16 @@ func NewEntry(info os.FileInfo, path string, env *Env) *Entry {
 }
 
 func (e *Entry) GetPath() string {
-  return e.node.Path
+  return e.Node.Path
 }
 
 func (e *Entry) ShouldSkip() bool {
-  isDir := e.node.IsDir()
+  isDir := e.Node.IsDir()
 
-  for _, n := range e.env.exclude {
-    fullMatch, _ := filepath.Match(n, e.node.Path)
-    baseMatch, _ := filepath.Match(n, filepath.Base(e.node.Path))
-    if isDir && (fullMatch || baseMatch) {
+  for _, n := range e.env.Exclude {
+    fullMatch, _ := filepath.Match(n, e.Node.Path)
+    envMatch, _ := filepath.Match(n, filepath.Base(e.Node.Path))
+    if isDir && (fullMatch || envMatch) {
       return true
     }
   }
@@ -42,22 +43,22 @@ func (e *Entry) ShouldSkip() bool {
 }
 
 func (e *Entry) ShouldProcess() bool {
-  isDir := e.node.IsDir()
+  isDir := e.Node.IsDir()
 
-  if isDir || e.node.Size() > int64(e.env.limitBytes) {
+  if isDir || e.Node.Size() > int64(e.env.LimitBytes) {
     return false
   }
 
   return true
 }
 
-func (e *Entry) MatchFirst() (*Match, error) {
+func (e *Entry) MatchFirst() (*model.Match, error) {
 
-  if !e.node.Mode().IsRegular() {
+  if !e.Node.Mode().IsRegular() {
     return nil, nil
   }
 
-  file, err := os.Open(e.node.Path)
+  file, err := os.Open(e.Node.Path)
 
   if err != nil {
     return nil, err
@@ -75,8 +76,8 @@ func (e *Entry) MatchFirst() (*Match, error) {
       break
     }
 
-    if e.env.pattern.Match(line) {
-      return &Match{LineNumber: count, Content: formatMatchLine(string(line))}, nil
+    if e.env.Pattern.Match(line) {
+      return &model.Match{LineNumber: count, Content: formatMatchLine(string(line))}, nil
     }
     count += 1
   }
@@ -84,15 +85,15 @@ func (e *Entry) MatchFirst() (*Match, error) {
 	return nil, nil
 }
 
-func (e *Entry) MatchAll() ([]*Match, error) {
+func (e *Entry) MatchAll() ([]*model.Match, error) {
 
-  var m []*Match = nil
+  var m []*model.Match = nil
 
-  if !e.node.Mode().IsRegular() {
+  if !e.Node.Mode().IsRegular() {
     return m, nil
   }
 
-  file, err := os.Open(e.node.Path)
+  file, err := os.Open(e.Node.Path)
 
   if err != nil {
     return m, err
@@ -102,7 +103,7 @@ func (e *Entry) MatchAll() ([]*Match, error) {
 
   bufread := bufio.NewReader(file)
 
-  m = []*Match{}
+  m = []*model.Match{}
   count := 1
 
   for {
@@ -112,8 +113,8 @@ func (e *Entry) MatchAll() ([]*Match, error) {
       break
     }
 
-    if e.env.pattern.Match(line) {
-      m = append(m, &Match{ 
+    if e.env.Pattern.Match(line) {
+      m = append(m, &model.Match{ 
         LineNumber: count, 
         Content:    formatMatchLine(string(line)),
       })

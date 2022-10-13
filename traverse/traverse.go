@@ -1,85 +1,90 @@
 package traverse
 
 import (
-  "errors"
-  "os"
-  "path/filepath"
+	"errors"
+	"os"
+	"path/filepath"
+
+	"github.com/canta2899/mgp/model"
 )
 
 // Process path and enqueues if ok for match checking
-func (en *Env) ProcessEntry(e *Entry) error {
+func ProcessEntry(f model.FileInfo, config *model.Config) error {
 
-  if e.ShouldSkip() {
-    return filepath.SkipDir
-  }
+	i := NewInspector(f, config)
 
-  if !e.ShouldProcess() {
-    return nil
-  }
+	if i.ShouldSkip() {
+		return filepath.SkipDir
+	}
 
-  // hangs if the buffer is full
-  en.Schan <- true
-  // adds one goroutine to the wait group
-  en.Wg.Add(1)
-  go func() {
-    if en.MatchContext {
-      match, err := e.MatchAll()
-      
-      if err == nil && match != nil {
-        en.Msg.AddMatches(e.GetPath(), match)
-      }
-    } else {
-      singleMatch, err := e.MatchFirst()
+	if !i.ShouldProcess() {
+		return nil
+	}
 
-      if err == nil && singleMatch != nil {
-        en.Msg.AddMatch(e.GetPath(), singleMatch)
-      }
-    }
+	// hangs if the buffer is full
+	config.Schan <- true
+	// adds one goroutine to the wait group
+	config.Wg.Add(1)
+	go func() {
+		if config.MatchContext {
+			match, err := i.MatchAll()
 
-    // frees one position in the buffer
-    <-en.Schan
-    // signals goroutine finished
-    en.Wg.Done()
-  }()
+			if err == nil && match != nil {
+				config.Msg.AddMatches(i.File.Path, match)
+			}
+		} else {
+			singleMatch, err := i.MatchFirst()
 
-  return nil
+			if err == nil && singleMatch != nil {
+				config.Msg.AddMatch(i.File.Path, singleMatch)
+			}
+		}
+
+		// frees one position in the buffer
+		<-config.Schan
+		// signals goroutine finished
+		config.Wg.Done()
+	}()
+
+	return nil
 }
 
-func (en *Env) Run() {
+func TraversePath(config *model.Config) {
 
-  if _, err := os.Stat(en.StartPath); os.IsNotExist(err) {
-    en.Msg.AddPathError(en.StartPath, errors.New("path does not exists"))
-    os.Exit(1)
-  }
+	if _, err := os.Stat(config.StartPath); os.IsNotExist(err) {
+		config.Msg.AddPathError(config.StartPath, errors.New("path does not exists"))
+		os.Exit(1)
+	}
 
-  // Traversing filepath
-  filepath.Walk(en.StartPath,
+	// Traversing filepath
+	filepath.Walk(config.StartPath,
 
-  func(pathname string, info os.FileInfo, err error) error {
+		func(pathname string, info os.FileInfo, err error) error {
 
-    if *en.StopWalk {
-      // If the termination is requested, the path Walking
-      // stops and the function returns with an error
-      return errors.New("user requested termination")
-    }
-    e := NewEntry(info, pathname, en)
+			if *config.StopWalk {
+				// If the termination is requested, the path Walking
+				// stops and the function returns with an error
+				return errors.New("user requested termination")
+			}
 
-    // Processes path in search of matches with the given
-    // pattern or the excluded directories
-    if err == nil {
-      return en.ProcessEntry(e)
-    }
+			e := model.FileInfo{FileInfo: info, Path: pathname}
 
-    // Checking permission and access errors
-    en.Msg.AddPathError(e.GetPath(), err)
+			// Processes path in search of matches with the given
+			// pattern or the excluded directories
+			if err == nil {
+				return ProcessEntry(e, config)
+			}
 
-    if e.Node.IsDir() {
-      return filepath.SkipDir
-    }
+			// Checking permission and access errors
+			config.Msg.AddPathError(e.Path, err)
 
-    return nil 
-  })
+			if e.IsDir() {
+				return filepath.SkipDir
+			}
 
-// Waits for goroutines to finish
-  en.Wg.Wait()
+			return nil
+		})
+
+	// Waits for goroutines to finish
+	config.Wg.Wait()
 }

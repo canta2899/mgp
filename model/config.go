@@ -1,17 +1,16 @@
-package traverse
+package model
 
 import (
   "regexp"
   "sync"
-  "github.com/canta2899/mgp/output"
 )
 
-type Env struct {
+type Config struct {
   Wg           sync.WaitGroup
   Schan        chan bool
   StopWalk     *bool
   MatchContext bool
-  Msg          output.OutputHandler
+  Msg          OutputHandler
   Pattern      *regexp.Regexp
   StartPath    string
   Exclude      []string

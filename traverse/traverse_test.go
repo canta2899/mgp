@@ -7,23 +7,24 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/canta2899/mgp/model"
 	"github.com/canta2899/mgp/output"
 )
 
 func compileRegex(pattern string, caseInsensitive bool) (*regexp.Regexp, error) {
-  if caseInsensitive {
-    pattern = "(?i)" + pattern
-  }
+	if caseInsensitive {
+		pattern = "(?i)" + pattern
+	}
 
-  if r, err := regexp.Compile(pattern); err == nil {
-    return r, nil
-  }
+	if r, err := regexp.Compile(pattern); err == nil {
+		return r, nil
+	}
 
-  return nil, errors.New("unable to compile regex pattern")
+	return nil, errors.New("unable to compile regex pattern")
 }
 
 func IsPathExpected(expected []string, current string) bool {
-  // todo should abs path be used for safety? 
+	// todo should abs path be used for safety?
 	// currentAbs, _ := filepath.Abs(filepath.Clean(current))
 
 	for _, entry := range expected {
@@ -49,7 +50,7 @@ func TestValidMatches(t *testing.T) {
 	for key, expected := range expectedOutputs {
 
 		pattern, err := compileRegex(key, false)
-    handler := output.NewTestOutputHandler()
+		handler := output.NewTestOutputHandler()
 
 		if err != nil {
 			t.Fatal("Error compiling regexp")
@@ -57,7 +58,7 @@ func TestValidMatches(t *testing.T) {
 
 		stopWalk := false
 
-		env := &Env{
+		config := &model.Config{
 			Wg:         sync.WaitGroup{},
 			Schan:      make(chan bool, 16),
 			Msg:        handler,
@@ -68,13 +69,13 @@ func TestValidMatches(t *testing.T) {
 			LimitBytes: limit,
 		}
 
-		env.Run()
+		TraversePath(config)
 
-    for _, value := range handler.Matches {
-      if !IsPathExpected(expected, value) {
-        t.Fatalf("%v is not expected. Output should contain %v\n", value, expected)
-      }
-    }
+		for _, value := range handler.Matches {
+			if !IsPathExpected(expected, value) {
+				t.Fatalf("%v is not expected. Output should contain %v\n", value, expected)
+			}
+		}
 
 	}
 }

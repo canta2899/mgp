@@ -67,6 +67,7 @@ func TestValidMatches(t *testing.T) {
 			StartPath:  "./testdata",
 			Exclude:    []string{".bzr", "CVS", ".git", ".hg", ".svn", ".idea", ".tox"},
 			LimitBytes: limit,
+			MatchAll:   false,
 		}
 
 		TraversePath(config)

@@ -27,8 +27,7 @@ func ProcessEntry(f model.FileInfo, config *model.Config) error {
 	config.Wg.Add(1)
 	go func() {
 		match, err := i.Match(config.MatchAll)
-
-		if err == nil && match != nil {
+		if err == nil && match != nil && len(match) != 0 {
 			config.Msg.AddMatches(i.File.Path, match)
 		}
 

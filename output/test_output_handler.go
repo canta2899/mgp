@@ -1,6 +1,8 @@
 package output
 
-import "github.com/canta2899/mgp/model"
+import (
+	"github.com/canta2899/mgp/model"
+)
 
 type TestOutputHandler struct {
 	Matches []string

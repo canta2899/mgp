@@ -1,10 +1,9 @@
 package main
 
 import (
-  "github.com/canta2899/mgp/cli"
+	"github.com/canta2899/mgp/cli"
 )
 
 func main() {
-  cli.RunApp()
+	cli.RunApp()
 }
-

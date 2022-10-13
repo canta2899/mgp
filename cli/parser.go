@@ -15,7 +15,7 @@ var STD_EXC_DIRS = []string{".bzr", "CVS", ".git", ".hg", ".svn", ".idea", ".tox
 
 type Flags struct {
 	workers    int
-	nocolor    bool
+	raw        bool
 	icase      bool
 	exclude    string
 	limitBytes int
@@ -57,7 +57,7 @@ func ParseArgs() *Parameters {
 	flag.BoolVar(&printVersion, "v", false, "Prints current mgp version")
 	flag.IntVar(&f.limitBytes, "lim", 100, "File size limit")
 	flag.BoolVar(&f.icase, "i", false, "Performs case insensitive matching")
-	flag.BoolVar(&f.nocolor, "raw", false, "Disable colored output")
+	flag.BoolVar(&f.raw, "raw", false, "Disable colored output")
 	flag.StringVar(&f.exclude, "exc", "", "Excluded paths (specified as a comma separated list like \"path1,path2\")")
 	flag.BoolVar(&f.matchAll, "all", false, "Show every match for a file")
 	flag.BoolVar(&f.showCtx, "ctx", false, "Print match context")

@@ -15,6 +15,7 @@ type Inspector struct {
 	Config *model.Config
 }
 
+// Allows inspection of given file in search of matches
 func NewInspector(file model.FileInfo, config *model.Config) *Inspector {
 	return &Inspector{
 		File:   file,
@@ -22,6 +23,7 @@ func NewInspector(file model.FileInfo, config *model.Config) *Inspector {
 	}
 }
 
+// Determines if the path entry should be skipped
 func (i *Inspector) ShouldSkip() bool {
 	isDir := i.File.IsDir()
 
@@ -36,6 +38,7 @@ func (i *Inspector) ShouldSkip() bool {
 	return false
 }
 
+// Determines if the path entry should be processed
 func (e *Inspector) ShouldProcess() bool {
 	isDir := e.File.IsDir()
 
@@ -46,16 +49,25 @@ func (e *Inspector) ShouldProcess() bool {
 	return true
 }
 
+// formatting text line in order to trim it
+func formatMatchLine(line string) string {
+	return strings.TrimSpace(strings.Trim(line, "\t"))
+}
+
+// opens a file in search of matches,
+// all = true allows to get all matching lines from a file
 func (e *Inspector) Match(all bool) ([]*model.Match, error) {
 
 	var m []*model.Match = nil
 
+	// non regular files should not be processed
 	if !e.File.Mode().IsRegular() {
 		return m, nil
 	}
 
 	file, err := os.Open(e.File.Path)
 
+	// might happend in case of permission errors
 	if err != nil {
 		return m, err
 	}
@@ -75,22 +87,20 @@ func (e *Inspector) Match(all bool) ([]*model.Match, error) {
 		}
 
 		if e.Config.Pattern.Match(line) {
+			// build match according to regexp match output
 			m = append(m, &model.Match{
 				LineNumber: count,
 				Content:    formatMatchLine(string(line)),
 			})
 
 			if !all {
+				// just return the first one if all is false
 				return m, nil
 			}
 		}
 
-		count += 1
+		count += 1 // counts the line of the file
 	}
 
 	return m, nil
-}
-
-func formatMatchLine(line string) string {
-	return strings.TrimSpace(strings.Trim(line, "\t"))
 }

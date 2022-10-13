@@ -15,24 +15,31 @@ import (
 
 func compileRegex(pattern string, caseInsensitive bool) (*regexp.Regexp, error) {
 	if caseInsensitive {
+		// (?i) is case insensitivie notation in go regexp
 		pattern = "(?i)" + pattern
 	}
 
 	return regexp.Compile(pattern)
 }
 
-func setSignalHandlers(stopWalk *bool) {
+// Sets a SIGTERM handler in order to stop when Ctrl+C is pressed
+func setSignalHandlers(config *model.Config) {
 	sigch := make(chan os.Signal, 1)
 	signal.Notify(sigch, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-sigch
-		*stopWalk = true
+		*config.StopWalk = true
 	}()
 }
 
+// Runs mgp from command line interface
 func RunApp() {
+	// parses cli input
 	params := ParseArgs()
-	handler := output.NewFmtOutputHandler(!params.nocolor, params.showCtx)
+
+	// cli handler for output relatex stuff
+	handler := output.NewFmtOutputHandler(!params.raw, params.showCtx)
+
 	pattern, err := compileRegex(params.pattern, params.icase)
 
 	if err != nil {
@@ -41,8 +48,8 @@ func RunApp() {
 
 	stopWalk := false
 
-	setSignalHandlers(&stopWalk)
-
+	// the config object will be used by the core application
+	// in order to get handlers, flags, etc.
 	env := &model.Config{
 		Wg:         sync.WaitGroup{},
 		Schan:      make(chan bool, params.workers),
@@ -55,5 +62,8 @@ func RunApp() {
 		LimitBytes: params.limitBytes,
 	}
 
+	setSignalHandlers(env)
+
+	// begin path traversation in search of matches
 	traverse.TraversePath(env)
 }

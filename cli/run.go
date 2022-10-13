@@ -8,7 +8,7 @@ import (
   "regexp"
   "sync"
   "syscall"
-  env "github.com/canta2899/mgp/env"
+  "github.com/canta2899/mgp/traverse"
   "github.com/canta2899/mgp/output"
 )
 
@@ -46,7 +46,7 @@ func RunApp() {
 
   setSignalHandlers(&stopWalk)
 
-  env := &env.Env{
+  env := &traverse.Env{
     Wg:           sync.WaitGroup{},
     Schan:        make(chan bool, params.workers),
     Msg:          handler,

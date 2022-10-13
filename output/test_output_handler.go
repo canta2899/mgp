@@ -14,10 +14,6 @@ func NewTestOutputHandler() *TestOutputHandler {
 	}
 }
 
-func (f *TestOutputHandler) AddMatch(path string, match *model.Match) {
-	f.Matches = append(f.Matches, path)
-}
-
 func (f *TestOutputHandler) AddMatches(path string, matches []*model.Match) {
 	f.Matches = append(f.Matches, path)
 }

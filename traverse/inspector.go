@@ -46,40 +46,7 @@ func (e *Inspector) ShouldProcess() bool {
 	return true
 }
 
-func (e *Inspector) MatchFirst() (*model.Match, error) {
-
-	if !e.File.Mode().IsRegular() {
-		return nil, nil
-	}
-
-	file, err := os.Open(e.File.Path)
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer file.Close()
-
-	bufread := bufio.NewReader(file)
-
-	count := 1
-	for {
-		line, err := bufread.ReadBytes('\n')
-
-		if err == io.EOF {
-			break
-		}
-
-		if e.Config.Pattern.Match(line) {
-			return &model.Match{LineNumber: count, Content: formatMatchLine(string(line))}, nil
-		}
-		count += 1
-	}
-
-	return nil, nil
-}
-
-func (e *Inspector) MatchAll() ([]*model.Match, error) {
+func (e *Inspector) Match(all bool) ([]*model.Match, error) {
 
 	var m []*model.Match = nil
 
@@ -112,6 +79,10 @@ func (e *Inspector) MatchAll() ([]*model.Match, error) {
 				LineNumber: count,
 				Content:    formatMatchLine(string(line)),
 			})
+
+			if !all {
+				return m, nil
+			}
 		}
 
 		count += 1

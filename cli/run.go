@@ -32,7 +32,7 @@ func setSignalHandlers(stopWalk *bool) {
 
 func RunApp() {
 	params := ParseArgs()
-	handler := output.NewFmtOutputHandler(true)
+	handler := output.NewFmtOutputHandler(!params.nocolor, params.showCtx)
 	pattern, err := compileRegex(params.pattern, params.icase)
 
 	if err != nil {
@@ -44,15 +44,15 @@ func RunApp() {
 	setSignalHandlers(&stopWalk)
 
 	env := &model.Config{
-		Wg:           sync.WaitGroup{},
-		Schan:        make(chan bool, params.workers),
-		Msg:          handler,
-		MatchContext: params.matchContext,
-		Pattern:      pattern,
-		StopWalk:     &stopWalk,
-		StartPath:    params.startpath,
-		Exclude:      params.GetExcludedDirs(),
-		LimitBytes:   params.limitBytes,
+		Wg:         sync.WaitGroup{},
+		Schan:      make(chan bool, params.workers),
+		Msg:        handler,
+		MatchAll:   params.matchAll,
+		Pattern:    pattern,
+		StopWalk:   &stopWalk,
+		StartPath:  params.startpath,
+		Exclude:    params.GetExcludedDirs(),
+		LimitBytes: params.limitBytes,
 	}
 
 	traverse.TraversePath(env)

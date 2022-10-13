@@ -26,18 +26,10 @@ func ProcessEntry(f model.FileInfo, config *model.Config) error {
 	// adds one goroutine to the wait group
 	config.Wg.Add(1)
 	go func() {
-		if config.MatchContext {
-			match, err := i.MatchAll()
+		match, err := i.Match(config.MatchAll)
 
-			if err == nil && match != nil {
-				config.Msg.AddMatches(i.File.Path, match)
-			}
-		} else {
-			singleMatch, err := i.MatchFirst()
-
-			if err == nil && singleMatch != nil {
-				config.Msg.AddMatch(i.File.Path, singleMatch)
-			}
+		if err == nil && match != nil {
+			config.Msg.AddMatches(i.File.Path, match)
 		}
 
 		// frees one position in the buffer

@@ -12,15 +12,16 @@ var okColor = color.New(color.FgHiGreen).SprintFunc()
 var koColor = color.New(color.FgRed).SprintFunc()
 
 type FmtOutputHandler struct {
-	Logger      *log.Logger
-	ErrorLogger *log.Logger
-	Ok          string
-	Ko          string
-	OkColor     func(a ...interface{}) string
-	KoColor     func(a ...interface{}) string
+	Logger       *log.Logger
+	ErrorLogger  *log.Logger
+	Ok           string
+	Ko           string
+	OkColor      func(a ...interface{}) string
+	KoColor      func(a ...interface{}) string
+	PrintContext bool
 }
 
-func NewFmtOutputHandler(colored bool) *FmtOutputHandler {
+func NewFmtOutputHandler(colored, printContext bool) *FmtOutputHandler {
 	var olog, elog *log.Logger
 
 	if colored {
@@ -32,18 +33,19 @@ func NewFmtOutputHandler(colored bool) *FmtOutputHandler {
 	}
 
 	return &FmtOutputHandler{
-		Logger:      olog,
-		ErrorLogger: elog,
+		Logger:       olog,
+		ErrorLogger:  elog,
+		PrintContext: printContext,
 	}
-}
-
-func (f *FmtOutputHandler) AddMatch(path string, match *model.Match) {
-	f.Logger.Println(path)
 }
 
 func (f *FmtOutputHandler) AddMatches(path string, matches []*model.Match) {
 	for _, m := range matches {
-		f.Logger.Printf("%v:%v:  %v", path, m.LineNumber, m.Content)
+		if f.PrintContext {
+			f.Logger.Printf("%v:%v:  %v", path, m.LineNumber, m.Content)
+		} else {
+			f.Logger.Printf("%v", path)
+		}
 	}
 }
 

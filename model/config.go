@@ -1,18 +1,18 @@
 package model
 
 import (
-  "regexp"
-  "sync"
+	"regexp"
+	"sync"
 )
 
 type Config struct {
-  Wg           sync.WaitGroup
-  Schan        chan bool
-  StopWalk     *bool
-  MatchContext bool
-  Msg          OutputHandler
-  Pattern      *regexp.Regexp
-  StartPath    string
-  Exclude      []string
-  LimitBytes   int
+	Wg         sync.WaitGroup
+	Schan      chan bool
+	StopWalk   *bool
+	MatchAll   bool
+	Msg        OutputHandler
+	Pattern    *regexp.Regexp
+	StartPath  string
+	Exclude    []string
+	LimitBytes int
 }

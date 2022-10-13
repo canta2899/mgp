@@ -88,10 +88,7 @@ func (e *Inspector) Match(all bool) ([]*model.Match, error) {
 
 		if e.Config.Pattern.Match(line) {
 			// build match according to regexp match output
-			m = append(m, &model.Match{
-				LineNumber: count,
-				Content:    formatMatchLine(string(line)),
-			})
+			m = append(m, model.NewMatch(count, formatMatchLine(string(line))))
 
 			if !all {
 				// just return the first one if all is false

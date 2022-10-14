@@ -38,11 +38,15 @@ Two parameters are required
 
 These can be specified as positional arguments like in grep. Moreover, additional flags can be specified before the pattern and the starting path. These allow to: 
 
-- Exclude specific path or directories `-exc "path1,path2,path3"` 
-- Specify a size limit (in Megabytes) in order to exclude big files `-lim 800`
-- Specify the maximum number of goroutines that can run simultaneously `-w 100`
-- Disable the colored output `-raw`
-- Perform case insensitive matching `-i`
+| Flag                       | Action                                                                |
+| -------------------------- | --------------------------------------------------------------------- |
+| `-exc "path1,path2,path3"` | Exclude specific path or directories                                  |
+| `-lim 800`                 | Specify a size limit (in megabytes) in order to exclude big files     |
+| `-w 100`                   | Specifiy the maximum number of goroutines that can run simultaneously |
+| `-raw`                     | Disable fancy output                                                  |
+| `-i`                       | Perform case insensitive matching                                     |
+| `-ctx`                     | Print matching lines together with the respective path                |
+| `-all`                     | Print all matching lines for each file                                |
 
 ### Examples
 
@@ -67,7 +71,7 @@ mgp -exc "not-me" Panda .
 Here's, instead, an example that searches for the word *Node* and the word *node* recursively starting from the */home/user/* path and specifically ignoring the */home/user/.local/bin* directory and directories named *.git* at any level.
 
 ```sh
-mgp -exc ".git,/home/user.local/bin" "[Nn]ode" /home/user/ 
+mgp -exc ".git,/home/user,local/bin" "[Nn]ode" /home/user/ 
 ```
 
 <p align="center">
@@ -85,7 +89,7 @@ Precompiled binaries are available in the **Releases** section of this repositor
 tar -xzf mgp-v1.0.0-darwin-amd64.tar.gz
 ```
 
-This will extract the **executable** and a text file containting the **license**. You can, then, place the binary file in your path (or symlink it). Running `mgp -v` should, then, prompt a message stating the current version.
+This will extract the **executable** and a text file containting the **license**. You can, then, place the binary file in your path (or symlink it). Running `mgp` should, then, prompt a message stating the current version.
 
 ### Source code
 

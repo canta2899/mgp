@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/canta2899/mgp/model"
+	"github.com/canta2899/mgp/pkg/model"
 	"github.com/fatih/color"
 )
 

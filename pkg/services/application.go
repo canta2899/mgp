@@ -1,16 +1,34 @@
-package traverse
+package services
 
 import (
 	"errors"
 	"os"
 	"path/filepath"
+	"regexp"
+	"sync"
 
-	"github.com/canta2899/mgp/model"
+	"github.com/canta2899/mgp/pkg/model"
 )
 
-// Process path and enqueues if ok for match checking
-func ProcessEntry(f model.FileInfo, config *model.Config) error {
+type Application struct {
+	Wg         sync.WaitGroup
+	Running    chan bool
+	StopWalk   chan bool
+	MatchAll   bool
+	Msg        model.OutputHandler
+	Pattern    *regexp.Regexp
+	Explorer   model.PathExplorer
+	Exclude    []string
+	LimitBytes int
+}
 
+func (c *Application) Run() {
+	c.Explorer.Walk(evalPath(c))
+	c.Wg.Wait()
+}
+
+// Process path and enqueues if ok for match checking
+func processEntry(f model.FileInfo, config *Application) error {
 	i := NewInspector(f, config)
 
 	if i.ShouldSkip() {
@@ -22,7 +40,7 @@ func ProcessEntry(f model.FileInfo, config *model.Config) error {
 	}
 
 	// hangs if the buffer is full
-	config.Schan <- true
+	config.Running <- true
 	// adds one goroutine to the wait group
 	config.Wg.Add(1)
 	go func() {
@@ -32,7 +50,7 @@ func ProcessEntry(f model.FileInfo, config *model.Config) error {
 		}
 
 		// frees one position in the buffer
-		<-config.Schan
+		<-config.Running
 		// signals goroutine finished
 		config.Wg.Done()
 	}()
@@ -40,30 +58,19 @@ func ProcessEntry(f model.FileInfo, config *model.Config) error {
 	return nil
 }
 
-func TraversePath(config *model.Config) {
-
-	if _, err := os.Stat(config.StartPath); os.IsNotExist(err) {
-		config.Msg.AddPathError(config.StartPath, errors.New("path does not exists"))
-		os.Exit(1)
-	}
-
-	// Traversing filepath
-	filepath.Walk(config.StartPath,
-
-		func(pathname string, info os.FileInfo, err error) error {
-
-			if *config.StopWalk {
-				// If the termination is requested, the path Walking
-				// stops and the function returns with an error
-				return errors.New("user requested termination")
-			}
-
+// Traversing filepath
+func evalPath(config *Application) func(pathname string, info os.FileInfo, err error) error {
+	return func(pathname string, info os.FileInfo, err error) error {
+		select {
+		case <-config.StopWalk:
+			return errors.New("walk ended")
+		default:
 			e := model.FileInfo{FileInfo: info, Path: pathname}
 
 			// Processes path in search of matches with the given
 			// pattern or the excluded directories
 			if err == nil {
-				return ProcessEntry(e, config)
+				return processEntry(e, config)
 			}
 
 			// Checking permission and access errors
@@ -74,8 +81,6 @@ func TraversePath(config *model.Config) {
 			}
 
 			return nil
-		})
-
-	// Waits for goroutines to finish
-	config.Wg.Wait()
+		}
+	}
 }

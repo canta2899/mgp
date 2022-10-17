@@ -1,4 +1,4 @@
-package traverse
+package services
 
 import (
 	"bufio"
@@ -7,16 +7,16 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/canta2899/mgp/model"
+	"github.com/canta2899/mgp/pkg/model"
 )
 
 type Inspector struct {
 	File   model.FileInfo
-	Config *model.Config
+	Config *Application
 }
 
 // Allows inspection of given file in search of matches
-func NewInspector(file model.FileInfo, config *model.Config) *Inspector {
+func NewInspector(file model.FileInfo, config *Application) *Inspector {
 	return &Inspector{
 		File:   file,
 		Config: config,

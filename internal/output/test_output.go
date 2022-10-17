@@ -1,7 +1,7 @@
 package output
 
 import (
-	"github.com/canta2899/mgp/model"
+	"github.com/canta2899/mgp/pkg/model"
 )
 
 type TestOutputHandler struct {

@@ -96,7 +96,7 @@ This will extract the **executable** and a text file containting the **license**
 You can also download **MGP** as a Go module. You'll have to install the Go distribution for your system and then run
 
 ```sh
-go install github.com/canta2899/mgp@latest
+go install github.com/canta2899/mgp/cmd/mgp@latest
 ```
 
 This will download and compile the program for your platform.

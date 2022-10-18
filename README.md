@@ -41,6 +41,7 @@ These can be specified as positional arguments like in grep. Moreover, additiona
 | Flag                       | Action                                                                |
 | -------------------------- | --------------------------------------------------------------------- |
 | `-exc "path1,path2,path3"` | Exclude specific path or directories                                  |
+| `-inc "path1,path2,path3"` | Include specific path or directories                                  |
 | `-lim 800`                 | Specify a size limit (in megabytes) in order to exclude big files     |
 | `-w 100`                   | Specifiy the maximum number of goroutines that can run simultaneously |
 | `-raw`                     | Disable fancy output                                                  |

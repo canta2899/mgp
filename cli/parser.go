@@ -11,7 +11,7 @@ const VERSION string = "v1.4.1"
 const MEGABYTE int = 1048576
 const PROG_NAME = "mgp"
 
-var STD_EXC_DIRS = []string{".bzr", "CVS", ".git", ".hg", ".svn", ".idea", ".tox"}
+var STD_EXC_DIRS = []string{".bzr", "CVS", ".git", ".hg", ".svn", ".idea", ".tox", "node_modules"}
 
 type Flags struct {
 	workers    int

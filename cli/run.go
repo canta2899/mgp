@@ -58,7 +58,8 @@ func RunApp() {
 		Pattern:    pattern,
 		StopWalk:   make(chan bool),
 		Explorer:   explorer,
-		Exclude:    params.GetExcludedDirs(),
+		Exclude:    params.GetExcluded(),
+		Include:    params.GetIncluded(),
 		LimitBytes: params.limitBytes,
 	}
 

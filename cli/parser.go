@@ -18,17 +18,28 @@ type Flags struct {
 	raw        bool
 	icase      bool
 	exclude    string
+	include    string
 	limitBytes int
 	matchAll   bool
 	showCtx    bool
 }
 
-func (f *Flags) GetExcludedDirs() []string {
+func (f *Flags) GetExcluded() []string {
 	if f.exclude == "" {
 		return STD_EXC_DIRS
 	}
 
 	return append(STD_EXC_DIRS, strings.Split(f.exclude, ",")...)
+}
+
+func (f *Flags) GetIncluded() []string {
+	inc := []string{}
+
+	if f.include == "" {
+		return inc
+	}
+
+	return append(inc, strings.Split(f.include, ",")...)
 }
 
 type Parameters struct {
@@ -59,6 +70,7 @@ func ParseArgs() *Parameters {
 	flag.BoolVar(&f.icase, "i", false, "Performs case insensitive matching")
 	flag.BoolVar(&f.raw, "raw", false, "Disable colored output")
 	flag.StringVar(&f.exclude, "exc", "", "Excluded paths (specified as a comma separated list like \"path1,path2\")")
+	flag.StringVar(&f.include, "inc", "", "Included paths (specified as a comma separated list like \"path1,path2\")")
 	flag.BoolVar(&f.matchAll, "all", false, "Show every match for a file")
 	flag.BoolVar(&f.showCtx, "ctx", false, "Print match context")
 

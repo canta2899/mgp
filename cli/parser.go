@@ -64,7 +64,7 @@ func ParseArgs() *Parameters {
 
 	printVersion := false
 
-	flag.IntVar(&f.workers, "w", 100, "Defines the max number of routines running at the same time")
+	flag.IntVar(&f.workers, "w", 1000, "Defines the max number of routines running at the same time")
 	flag.BoolVar(&printVersion, "v", false, "Prints current mgp version")
 	flag.IntVar(&f.limitBytes, "lim", 100, "File size limit")
 	flag.BoolVar(&f.icase, "i", false, "Performs case insensitive matching")

@@ -8,9 +8,9 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/canta2899/mgp/internal/fspathwalk"
 	"github.com/canta2899/mgp/internal/output"
-	"github.com/canta2899/mgp/internal/pathwalk"
-	"github.com/canta2899/mgp/pkg/services"
+	app "github.com/canta2899/mgp/pkg/application"
 )
 
 func compileRegex(pattern string, caseInsensitive bool) (*regexp.Regexp, error) {
@@ -23,7 +23,7 @@ func compileRegex(pattern string, caseInsensitive bool) (*regexp.Regexp, error) 
 }
 
 // Sets a SIGTERM handler in order to stop when Ctrl+C is pressed
-func setSignalHandlers(config *services.Application) {
+func setSignalHandlers(config *app.Application) {
 	sigch := make(chan os.Signal, 1)
 	signal.Notify(sigch, os.Interrupt, syscall.SIGTERM)
 	go func() {
@@ -42,7 +42,7 @@ func RunApp() {
 	}
 
 	handler := output.NewFmtOutputHandler(!params.raw, params.showCtx)
-	explorer := pathwalk.NewPathTraverser(params.startpath)
+	explorer := fspathwalk.NewFsPathWalk(params.startpath)
 
 	pattern, err := compileRegex(params.pattern, params.icase)
 
@@ -50,7 +50,7 @@ func RunApp() {
 		log.Fatalf(err.Error())
 	}
 
-	env := &services.Application{
+	env := &app.Application{
 		Wg:         sync.WaitGroup{},
 		Running:    make(chan bool, params.workers),
 		Msg:        handler,

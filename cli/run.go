@@ -10,7 +10,8 @@ import (
 
 	"github.com/canta2899/mgp/internal/fspathwalk"
 	"github.com/canta2899/mgp/internal/output"
-	app "github.com/canta2899/mgp/pkg/application"
+	app "github.com/canta2899/mgp/application"
+	"github.com/canta2899/mgp/model"
 )
 
 func compileRegex(pattern string, caseInsensitive bool) (*regexp.Regexp, error) {
@@ -28,7 +29,7 @@ func setSignalHandlers(config *app.Application) {
 	signal.Notify(sigch, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-sigch
-		config.StopWalk <- true
+		config.Options.StopWalk <- true
 	}()
 }
 
@@ -52,15 +53,17 @@ func RunApp() {
 
 	env := &app.Application{
 		Wg:         sync.WaitGroup{},
-		Running:    make(chan bool, params.workers),
 		Msg:        handler,
-		MatchAll:   params.matchAll,
-		Pattern:    pattern,
-		StopWalk:   make(chan bool),
 		Explorer:   explorer,
-		Exclude:    params.GetExcluded(),
-		Include:    params.GetIncluded(),
-		LimitBytes: params.limitBytes,
+    Options:    &model.Options{
+      Running:    make(chan bool, params.workers),
+      StopWalk:   make(chan bool),
+      MatchAll:   params.matchAll,
+      Pattern:    pattern,
+      Exclude:    params.GetExcluded(),
+      Include:    params.GetIncluded(),
+      LimitBytes: params.limitBytes,
+    },
 	}
 
 	setSignalHandlers(env)

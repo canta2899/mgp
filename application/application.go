@@ -6,24 +6,17 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
 
-	"github.com/canta2899/mgp/pkg/model"
+	"github.com/canta2899/mgp/model"
 )
 
 type Application struct {
 	Wg         sync.WaitGroup
-	Running    chan bool
-	StopWalk   chan bool
-	MatchAll   bool
 	Msg        model.OutputHandler
-	Pattern    *regexp.Regexp
 	Explorer   model.PathWalk
-	Exclude    []string
-	Include    []string
-	LimitBytes int
+  Options    *model.Options
 }
 
 func (app *Application) Run() {
@@ -34,7 +27,7 @@ func (app *Application) Run() {
 func (app *Application) getWalkFunction() func(pathname string, info os.FileInfo, err error) error {
 	return func(pathname string, info os.FileInfo, err error) error {
 		select {
-		case <-app.StopWalk:
+		case <-app.Options.StopWalk:
 			return errors.New("walk ended")
 		default:
 			e := model.FileInfo{FileInfo: info, Path: pathname}
@@ -55,22 +48,22 @@ func (app *Application) getWalkFunction() func(pathname string, info os.FileInfo
 
 // Determines if the path entry should be skipped
 func (app *Application) shouldSkip(f model.FileInfo) bool {
-	return matchCriteria(f, app.Exclude)
+	return matchCriteria(f, app.Options.Exclude)
 }
 
 // Determines if the path entry should be processed
 func (app *Application) shouldProcess(f model.FileInfo) bool {
 	isDir := f.IsDir()
 
-	if isDir || f.Size() > int64(app.LimitBytes) {
+	if isDir || f.Size() > int64(app.Options.LimitBytes) {
 		return false
 	}
 
-	if len(app.Include) == 0 {
+	if len(app.Options.Include) == 0 {
 		return true
 	}
 
-	return matchCriteria(f, app.Include)
+	return matchCriteria(f, app.Options.Include)
 }
 
 // formatting text line in order to trim it
@@ -88,14 +81,14 @@ func (app *Application) processEntry(f model.FileInfo) error {
 		return nil
 	}
 
-	app.Running <- true // hangs if the buffer is full
+	app.Options.Running <- true // hangs if the buffer is full
 	app.Wg.Add(1)
 	go func() {
-		match, err := app.match(f, app.MatchAll)
+		match, err := app.match(f, app.Options.MatchAll)
 		if err == nil && match != nil && len(match) != 0 {
 			app.Msg.AddMatches(f.Path, match)
 		}
-		<-app.Running // frees one position in the buffer
+		<-app.Options.Running // frees one position in the buffer
 		app.Wg.Done()
 	}()
 
@@ -132,7 +125,7 @@ func (app *Application) match(f model.FileInfo, all bool) ([]*model.Match, error
 			break
 		}
 
-		if app.Pattern.Match(line) {
+		if app.Options.Pattern.Match(line) {
 			m = append(m, model.NewMatch(count, formatMatchLine(string(line))))
 			if !all {
 				// just return the first one if all is false

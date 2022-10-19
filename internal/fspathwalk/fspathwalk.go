@@ -1,7 +1,6 @@
 package fspathwalk
 
 import (
-	"os"
 	"path/filepath"
 )
 
@@ -16,6 +15,5 @@ func NewFsPathWalk(sp string) *FsPathWalk {
 }
 
 func (pt *FsPathWalk) Walk(f filepath.WalkFunc) error {
-	callback := (func(pathname string, info os.FileInfo, err error) error)(f)
-	return filepath.Walk(pt.StartPath, callback)
+	return filepath.Walk(pt.StartPath, f)
 }

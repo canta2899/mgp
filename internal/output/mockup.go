@@ -9,8 +9,7 @@ type TestOutputHandler struct {
 	Errors  []string
 }
 
-// Mockup output handler that allows to collect paths for
-// testing purposes
+// Mockup output handler that allows to collect paths for testing purposes
 func NewTestOutputHandler() *TestOutputHandler {
 	return &TestOutputHandler{
 		Matches: []string{},

@@ -34,8 +34,8 @@ func setSignalHandlers(config *app.Application) {
 }
 
 // Runs mgp from command line interface
-func RunApp() {
-	params := ParseArgs()
+func RunApp(args []string) {
+	params := ParseArgs(args)
 
 	if _, err := os.Stat(params.startpath); os.IsNotExist(err) {
 		log.Println("Path does not exists")

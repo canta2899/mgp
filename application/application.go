@@ -13,10 +13,10 @@ import (
 )
 
 type Application struct {
-	Wg         sync.WaitGroup
-	Msg        model.OutputHandler
-	Explorer   model.PathWalk
-  Options    *model.Options
+	Wg       sync.WaitGroup
+	Msg      model.OutputHandler
+	Explorer model.PathWalk
+	Options  *model.Options
 }
 
 func (app *Application) Run() {
@@ -24,7 +24,7 @@ func (app *Application) Run() {
 	app.Wg.Wait()
 }
 
-func (app *Application) getWalkFunction() func(pathname string, info os.FileInfo, err error) error {
+func (app *Application) getWalkFunction() filepath.WalkFunc {
 	return func(pathname string, info os.FileInfo, err error) error {
 		select {
 		case <-app.Options.StopWalk:

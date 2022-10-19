@@ -1,7 +1,7 @@
 package model
 
-import "os"
+import "path/filepath"
 
 type PathWalk interface {
-	Walk(func(pathname string, info os.FileInfo, err error) error) error
+	Walk(f filepath.WalkFunc) error
 }

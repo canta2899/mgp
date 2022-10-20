@@ -8,10 +8,10 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/canta2899/mgp/internal/fspathwalk"
-	"github.com/canta2899/mgp/internal/output"
 	app "github.com/canta2899/mgp/application"
 	"github.com/canta2899/mgp/model"
+	"github.com/canta2899/mgp/pkg/fspathwalk"
+	"github.com/canta2899/mgp/pkg/output"
 )
 
 func compileRegex(pattern string, caseInsensitive bool) (*regexp.Regexp, error) {
@@ -52,18 +52,18 @@ func RunApp(args []string) {
 	}
 
 	env := &app.Application{
-		Wg:         sync.WaitGroup{},
-		Msg:        handler,
-		Explorer:   explorer,
-    Options:    &model.Options{
-      Running:    make(chan bool, params.workers),
-      StopWalk:   make(chan bool),
-      MatchAll:   params.matchAll,
-      Pattern:    pattern,
-      Exclude:    params.GetExcluded(),
-      Include:    params.GetIncluded(),
-      LimitBytes: params.limitBytes,
-    },
+		Wg:       sync.WaitGroup{},
+		Msg:      handler,
+		Explorer: explorer,
+		Options: &model.Options{
+			Running:    make(chan bool, params.workers),
+			StopWalk:   make(chan bool),
+			MatchAll:   params.matchAll,
+			Pattern:    pattern,
+			Exclude:    params.GetExcluded(),
+			Include:    params.GetIncluded(),
+			LimitBytes: params.limitBytes,
+		},
 	}
 
 	setSignalHandlers(env)

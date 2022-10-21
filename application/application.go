@@ -140,6 +140,11 @@ func (app *Application) match(f model.FileInfo, all bool) ([]*model.Match, error
 }
 
 func matchCriteria(f model.FileInfo, criteria []string) bool {
+
+	if len(criteria) == 0 {
+		return true
+	}
+
 	for _, n := range criteria {
 		fullMatch, _ := filepath.Match(n, f.Path)
 		envMatch, _ := filepath.Match(n, filepath.Base(f.Path))

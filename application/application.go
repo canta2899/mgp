@@ -57,7 +57,11 @@ func formatMatchLine(line string) string {
 // Process path and enqueues if ok for match checking
 func (app *Application) processEntry(f model.FileInfo) error {
 	if app.shouldSkip(f) {
-		return nil
+		if f.IsDir() {
+			return filepath.SkipDir
+		} else {
+			return nil
+		}
 	}
 
 	if f.IsDir() {

@@ -7,16 +7,16 @@ import (
 	"sync"
 
 	app "github.com/canta2899/mgp/application"
-	"github.com/canta2899/mgp/internal/fspathwalk"
-	"github.com/canta2899/mgp/internal/output"
+	"github.com/canta2899/mgp/internal/mockups"
 	"github.com/canta2899/mgp/model"
+	"github.com/canta2899/mgp/pkg/fspathwalk"
 )
 
 // Runs mgp using a custom handler and iterates over the output
 func main() {
 
 	// the test output handler just saves entries inside a slice
-	handler := output.NewTestOutputHandler()
+	handler := mockups.NewTestOutputHandler()
 
 	// walking inside current path
 	explorer := fspathwalk.NewFsPathWalk(".")

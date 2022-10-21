@@ -1,4 +1,4 @@
-package output
+package mockups
 
 import (
 	"github.com/canta2899/mgp/model"

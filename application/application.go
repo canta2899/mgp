@@ -36,10 +36,6 @@ func (app *Application) getWalkFunction() filepath.WalkFunc {
 				return app.processEntry(e)
 			}
 
-			if e.IsDir() {
-				return filepath.SkipDir
-			}
-
 			app.Msg.AddPathError(e.Path, err)
 			return nil
 		}
@@ -48,22 +44,9 @@ func (app *Application) getWalkFunction() filepath.WalkFunc {
 
 // Determines if the path entry should be skipped
 func (app *Application) shouldSkip(f model.FileInfo) bool {
-	return matchCriteria(f, app.Options.Exclude)
-}
-
-// Determines if the path entry should be processed
-func (app *Application) shouldProcess(f model.FileInfo) bool {
-	isDir := f.IsDir()
-
-	if isDir || f.Size() > int64(app.Options.LimitBytes) {
-		return false
-	}
-
-	if len(app.Options.Include) == 0 {
-		return true
-	}
-
-	return matchCriteria(f, app.Options.Include)
+	return f.Size() > int64(app.Options.LimitBytes) ||
+		matchCriteria(f, app.Options.Exclude) ||
+		matchCriteria(f, app.Options.Include)
 }
 
 // formatting text line in order to trim it
@@ -74,10 +57,10 @@ func formatMatchLine(line string) string {
 // Process path and enqueues if ok for match checking
 func (app *Application) processEntry(f model.FileInfo) error {
 	if app.shouldSkip(f) {
-		return filepath.SkipDir
+		return nil
 	}
 
-	if !app.shouldProcess(f) {
+	if f.IsDir() {
 		return nil
 	}
 
@@ -142,7 +125,7 @@ func (app *Application) match(f model.FileInfo, all bool) ([]*model.Match, error
 func matchCriteria(f model.FileInfo, criteria []string) bool {
 
 	if len(criteria) == 0 {
-		return true
+		return false
 	}
 
 	for _, n := range criteria {

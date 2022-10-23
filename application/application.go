@@ -44,9 +44,19 @@ func (app *Application) getWalkFunction() filepath.WalkFunc {
 
 // Determines if the path entry should be skipped
 func (app *Application) shouldSkip(f model.FileInfo) bool {
-	return f.Size() > int64(app.Options.LimitBytes) ||
-		matchCriteria(f, app.Options.Exclude) ||
-		matchCriteria(f, app.Options.Include)
+	isExcluded := matchCriteria(f, app.Options.Exclude)
+	isIncluded := matchCriteria(f, app.Options.Include)
+	exceedSize := f.Size() > int64(app.Options.LimitBytes) && !f.IsDir()
+
+	if exceedSize || isExcluded {
+		return true
+	}
+
+	if len(app.Options.Include) != 0 && !f.IsDir() {
+		return !isIncluded
+	}
+
+	return false
 }
 
 // formatting text line in order to trim it
@@ -126,12 +136,9 @@ func (app *Application) match(f model.FileInfo, all bool) ([]*model.Match, error
 	return m, nil
 }
 
+// matches a file with a set of patterns and returns true when
+// a match is found, false otherwise
 func matchCriteria(f model.FileInfo, criteria []string) bool {
-
-	if len(criteria) == 0 {
-		return false
-	}
-
 	for _, n := range criteria {
 		fullMatch, _ := filepath.Match(n, f.Path)
 		envMatch, _ := filepath.Match(n, filepath.Base(f.Path))

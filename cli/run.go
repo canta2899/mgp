@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
-	"sync"
 	"syscall"
 
 	app "github.com/canta2899/mgp/application"
@@ -24,12 +23,12 @@ func compileRegex(pattern string, caseInsensitive bool) (*regexp.Regexp, error) 
 }
 
 // Sets a SIGTERM handler in order to stop when Ctrl+C is pressed
-func setSignalHandlers(config *app.Application) {
+func setSignalHandlers(app *app.Application) {
 	sigch := make(chan os.Signal, 1)
 	signal.Notify(sigch, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-sigch
-		config.Options.StopWalk <- true
+		app.Stop()
 	}()
 }
 
@@ -42,8 +41,8 @@ func RunApp(args []string) {
 		os.Exit(1)
 	}
 
-	handler := output.NewFmtOutputHandler(!params.raw, params.showCtx)
-	explorer := fspathwalk.NewFsPathWalk(params.startpath)
+	outputHandler := output.NewFmtOutputHandler(!params.raw, params.showCtx)
+	pathWalker := fspathwalk.NewFsPathWalk(params.startpath)
 
 	pattern, err := compileRegex(params.pattern, params.icase)
 
@@ -51,13 +50,10 @@ func RunApp(args []string) {
 		log.Fatalf(err.Error())
 	}
 
-	env := &app.Application{
-		Wg:       sync.WaitGroup{},
-		Msg:      handler,
-		Explorer: explorer,
+	app := &app.Application{
+		Msg:      outputHandler,
+		Explorer: pathWalker,
 		Options: &model.Options{
-			Running:    make(chan bool, params.workers),
-			StopWalk:   make(chan bool),
 			MatchAll:   params.matchAll,
 			Pattern:    pattern,
 			Exclude:    params.GetExcluded(),
@@ -66,8 +62,8 @@ func RunApp(args []string) {
 		},
 	}
 
-	setSignalHandlers(env)
+	setSignalHandlers(app)
 
 	// begin path traversation in search of matches
-	env.Run()
+	app.Run(params.workers)
 }

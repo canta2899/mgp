@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"regexp"
-	"sync"
 
 	app "github.com/canta2899/mgp/application"
 	"github.com/canta2899/mgp/internal/mockups"
@@ -35,12 +34,9 @@ func main() {
 
 	// configures application
 	mgp := &app.Application{
-		Wg:       sync.WaitGroup{},
 		Msg:      handler,
 		Explorer: explorer,
 		Options: &model.Options{
-			Running:    make(chan bool, 1000),
-			StopWalk:   make(chan bool),
 			MatchAll:   false,
 			Pattern:    pattern,
 			Exclude:    exclude,
@@ -51,7 +47,7 @@ func main() {
 
 	log.Println("Searching for entries...")
 
-	mgp.Run()
+	mgp.Run(100) // run with 100 workers
 
 	// and then accesses the results
 	for _, entry := range handler.Matches {

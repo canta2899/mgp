@@ -12,22 +12,33 @@ import (
 	"github.com/canta2899/mgp/model"
 )
 
+var wg sync.WaitGroup = sync.WaitGroup{}
+var running chan bool = nil
+var stopWalk chan bool = nil
+
 type Application struct {
-	Wg       sync.WaitGroup
 	Msg      model.OutputHandler
 	Explorer model.PathWalk
 	Options  *model.Options
 }
 
-func (app *Application) Run() {
+func (app *Application) Run(maxWorkers int) {
+	running = make(chan bool, maxWorkers)
+	stopWalk = make(chan bool)
 	app.Explorer.Walk(app.getWalkFunction())
-	app.Wg.Wait()
+	wg.Wait()
+	close(stopWalk)
+}
+
+func (app *Application) Stop() {
+	stopWalk <- true
+	<-stopWalk
 }
 
 func (app *Application) getWalkFunction() filepath.WalkFunc {
 	return func(pathname string, info os.FileInfo, err error) error {
 		select {
-		case <-app.Options.StopWalk:
+		case <-stopWalk:
 			return errors.New("walk ended")
 		default:
 			e := model.FileInfo{FileInfo: info, Path: pathname}
@@ -83,15 +94,15 @@ func (app *Application) processEntry(f model.FileInfo) error {
 		return nil
 	}
 
-	app.Options.Running <- true // hangs if the buffer is full
-	app.Wg.Add(1)
+	running <- true // hangs if the buffer is full
+	wg.Add(1)
 	go func() {
 		match, err := app.match(f, app.Options.MatchAll)
 		if err == nil && match != nil && len(match) != 0 {
 			app.Msg.AddMatches(f.Path, match)
 		}
-		<-app.Options.Running // frees one position in the buffer
-		app.Wg.Done()
+		<-running // frees one position in the buffer
+		wg.Done()
 	}()
 
 	return nil

@@ -44,6 +44,11 @@ func (app *Application) getWalkFunction() filepath.WalkFunc {
 
 // Determines if the path entry should be skipped
 func (app *Application) shouldSkip(f model.FileInfo) bool {
+	// skipping regular files
+	if !f.IsDir() && !f.Mode().IsRegular() {
+		return true
+	}
+
 	isExcluded := matchCriteria(f, app.Options.Exclude)
 	isIncluded := matchCriteria(f, app.Options.Include)
 	exceedSize := f.Size() > int64(app.Options.LimitBytes) && !f.IsDir()
@@ -93,13 +98,7 @@ func (app *Application) processEntry(f model.FileInfo) error {
 }
 
 func (app *Application) match(f model.FileInfo, all bool) ([]*model.Match, error) {
-
 	var m []*model.Match = nil
-
-	// skipping regular files
-	if !f.Mode().IsRegular() {
-		return m, nil
-	}
 
 	file, err := os.Open(f.Path)
 

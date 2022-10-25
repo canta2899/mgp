@@ -38,16 +38,16 @@ Two parameters are required
 
 These can be specified as positional arguments like in grep. Moreover, additional flags can be specified before the pattern and the starting path. These allow to: 
 
-| Flag                       | Action                                                                |
-| -------------------------- | --------------------------------------------------------------------- |
-| `-exc "path1,path2,path3"` | Exclude specific path or directories                                  |
-| `-inc "path1,path2,path3"` | Include specific path or directories                                  |
-| `-lim 800`                 | Specify a size limit (in megabytes) in order to exclude big files     |
-| `-w 100`                   | Specifiy the maximum number of goroutines that can run simultaneously |
-| `-raw`                     | Disable fancy output                                                  |
-| `-i`                       | Perform case insensitive matching                                     |
-| `-ctx`                     | Print matching lines together with the respective path                |
-| `-all`                     | Print all matching lines for each file                                |
+| Flag                       | Action                                                                                        |
+|----------------------------|-----------------------------------------------------------------------------------------------|
+| `-exc "path1,path2,path3"` | Exclude specific path or directories                                                          |
+| `-inc "path1,path2,path3"` | Include specific path or directories                                                          |
+| `-lim 10mb`                | Specify a size limit (using b, kb, mb, gb) in order to skip files greater than what specified |
+| `-w 100`                   | Specifiy the maximum number of goroutines that can run simultaneously                         |
+| `-raw`                     | Disable fancy output                                                                          |
+| `-i`                       | Perform case insensitive matching                                                             |
+| `-ctx`                     | Print matching lines together with the respective path                                        |
+| `-all`                     | Print all matching lines for each file                                                        |
 
 ### Examples
 

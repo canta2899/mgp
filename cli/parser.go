@@ -109,7 +109,6 @@ func ParseArgs(args []string) *Parameters {
 	flag.BoolVar(&f.matchAll, "all", false, "Show every match for a file")
 	flag.BoolVar(&f.showCtx, "ctx", false, "Print match context")
 
-	flag.Parse()
   flag.CommandLine.Parse(args)
 
 	posArgs := flag.Args()

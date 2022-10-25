@@ -62,7 +62,7 @@ func (app *Application) shouldSkip(f model.FileInfo) bool {
 
 	isExcluded := matchCriteria(f, app.Options.Exclude)
 	isIncluded := matchCriteria(f, app.Options.Include)
-	exceedSize := f.Size() > int64(app.Options.LimitBytes) && !f.IsDir()
+	exceedSize := (int64(app.Options.LimitBytes) != 0 && f.Size() > int64(app.Options.LimitBytes) && !f.IsDir())
 
 	if exceedSize || isExcluded {
 		return true

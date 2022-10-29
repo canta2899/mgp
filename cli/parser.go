@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-const VERSION string = "v1.4.1"
+const VERSION string = "v1.5.0"
 const PROG_NAME = "mgp"
 
 var STD_EXC_DIRS = []string{".bzr", "CVS", ".git", ".hg", ".svn", ".idea", ".tox", "node_modules"}

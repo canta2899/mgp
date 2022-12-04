@@ -15,10 +15,8 @@ import (
 
 func compileRegex(pattern string, caseInsensitive bool) (*regexp.Regexp, error) {
 	if caseInsensitive {
-		// (?i) is case insensitivie notation in go regexp
 		pattern = "(?i)" + pattern
 	}
-
 	return regexp.Compile(pattern)
 }
 

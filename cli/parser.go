@@ -58,7 +58,7 @@ func PrintBriefHelpAndExit() {
 }
 
 func parseByteLimit(limit string) (int, error) {
-  limitExp, err := regexp.Compile("([0-9]+)\\s*(b|kb|mb|gb)?")
+  limitExp, err := regexp.Compile(`([0-9]+)\s*(b|kb|mb|gb)?`)
   
   if err != nil {
     return 0, err

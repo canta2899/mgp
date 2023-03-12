@@ -1,4 +1,4 @@
-package application
+package main
 
 import (
 	"bufio"
@@ -6,23 +6,30 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
-
-	"github.com/canta2899/mgp/model"
 )
 
 var wg sync.WaitGroup = sync.WaitGroup{}
 var running chan bool = nil
 var stopWalk chan bool = nil
 
-type Application struct {
-	Msg      model.OutputHandler
-	Explorer model.PathWalk
-	Options  *model.Options
+type Finder struct {
+	Msg      OutputHandler
+	Explorer *PathWalk
+	Options  *Options
 }
 
-func (app *Application) Run(maxWorkers int) {
+type Options struct {
+	MatchAll   bool
+	Pattern    *regexp.Regexp
+	Exclude    []string
+	Include    []string
+	LimitBytes int
+}
+
+func (app *Finder) Run(maxWorkers int) {
 	running = make(chan bool, maxWorkers)
 	stopWalk = make(chan bool)
 	app.Explorer.Walk(app.getWalkFunction())
@@ -30,18 +37,18 @@ func (app *Application) Run(maxWorkers int) {
 	close(stopWalk)
 }
 
-func (app *Application) Stop() {
+func (app *Finder) Stop() {
 	stopWalk <- true
 	<-stopWalk
 }
 
-func (app *Application) getWalkFunction() filepath.WalkFunc {
+func (app *Finder) getWalkFunction() filepath.WalkFunc {
 	return func(pathname string, info os.FileInfo, err error) error {
 		select {
 		case <-stopWalk:
 			return errors.New("walk ended")
 		default:
-			e := model.FileInfo{FileInfo: info, Path: pathname}
+			e := FileInfo{FileInfo: info, Path: pathname}
 
 			if err == nil {
 				return app.processEntry(e)
@@ -54,7 +61,7 @@ func (app *Application) getWalkFunction() filepath.WalkFunc {
 }
 
 // Determines if the path entry should be skipped
-func (app *Application) shouldSkip(f model.FileInfo) bool {
+func (app *Finder) shouldSkip(f FileInfo) bool {
 	// skipping regular files
 	if !f.IsDir() && !f.Mode().IsRegular() {
 		return true
@@ -81,7 +88,7 @@ func formatMatchLine(line string) string {
 }
 
 // Process path and enqueues if ok for match checking
-func (app *Application) processEntry(f model.FileInfo) error {
+func (app *Finder) processEntry(f FileInfo) error {
 	if app.shouldSkip(f) {
 		if f.IsDir() {
 			return filepath.SkipDir
@@ -108,8 +115,8 @@ func (app *Application) processEntry(f model.FileInfo) error {
 	return nil
 }
 
-func (app *Application) match(f model.FileInfo, all bool) ([]*model.Match, error) {
-	var m []*model.Match = nil
+func (app *Finder) match(f FileInfo, all bool) ([]*Match, error) {
+	var m []*Match = nil
 
 	file, err := os.Open(f.Path)
 
@@ -122,7 +129,7 @@ func (app *Application) match(f model.FileInfo, all bool) ([]*model.Match, error
 
 	bufread := bufio.NewReader(file)
 
-	m = []*model.Match{}
+	m = []*Match{}
 	count := 1 // counts line
 
 	for {
@@ -133,7 +140,7 @@ func (app *Application) match(f model.FileInfo, all bool) ([]*model.Match, error
 		}
 
 		if app.Options.Pattern.Match(line) {
-			m = append(m, model.NewMatch(count, formatMatchLine(string(line))))
+			m = append(m, NewMatch(count, formatMatchLine(string(line))))
 			if !all {
 				// just return the first one if all is false
 				return m, nil
@@ -148,7 +155,7 @@ func (app *Application) match(f model.FileInfo, all bool) ([]*model.Match, error
 
 // matches a file with a set of patterns and returns true when
 // a match is found, false otherwise
-func matchCriteria(f model.FileInfo, criteria []string) bool {
+func matchCriteria(f FileInfo, criteria []string) bool {
 	for _, n := range criteria {
 		fullMatch, _ := filepath.Match(n, f.Path)
 		envMatch, _ := filepath.Match(n, filepath.Base(f.Path))

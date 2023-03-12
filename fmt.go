@@ -1,10 +1,9 @@
-package output
+package main
 
 import (
 	"log"
 	"os"
 
-	"github.com/canta2899/mgp/model"
 	"github.com/fatih/color"
 )
 
@@ -39,7 +38,7 @@ func NewFmtOutputHandler(colored, printContext bool) *FmtOutputHandler {
 	}
 }
 
-func (f *FmtOutputHandler) AddMatches(path string, matches []*model.Match) {
+func (f *FmtOutputHandler) AddMatches(path string, matches []*Match) {
 	for _, m := range matches {
 		if f.PrintContext {
 			f.Logger.Printf("%v:%v:  %v", path, m.LineNumber, m.Content)

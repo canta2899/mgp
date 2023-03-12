@@ -1,4 +1,4 @@
-package model
+package main
 
 // Provides methods for handling output for matches
 type OutputHandler interface {

@@ -1,4 +1,4 @@
-package cli
+package main
 
 import (
 	"errors"
@@ -58,41 +58,41 @@ func PrintBriefHelpAndExit() {
 }
 
 func parseByteLimit(limit string) (int, error) {
-  limitExp, err := regexp.Compile(`([0-9]+)\s*(b|kb|mb|gb)?`)
-  
-  if err != nil {
-    return 0, err
-  }
+	limitExp, err := regexp.Compile(`([0-9]+)\s*(b|kb|mb|gb)?`)
 
-  if limitExp.MatchString(limit) {
-    sub := limitExp.FindStringSubmatch(limit)
+	if err != nil {
+		return 0, err
+	}
 
-    size := sub[1]
-    uom := sub[2]
-    
-    finalSize, _ := strconv.Atoi(size) 
+	if limitExp.MatchString(limit) {
+		sub := limitExp.FindStringSubmatch(limit)
 
-    // b is default
+		size := sub[1]
+		uom := sub[2]
 
-    switch uom {
-    case "kb":
-      finalSize *= 1024 
-    case "mb":
-      finalSize *= 1048576
-    case "gb":
-      finalSize *= 1073741824
-    }
+		finalSize, _ := strconv.Atoi(size)
 
-    return finalSize, nil
-  }
+		// b is default
 
-  return 0, errors.New("unable to match limit string")
+		switch uom {
+		case "kb":
+			finalSize *= 1024
+		case "mb":
+			finalSize *= 1048576
+		case "gb":
+			finalSize *= 1073741824
+		}
+
+		return finalSize, nil
+	}
+
+	return 0, errors.New("unable to match limit string")
 }
 
 func ParseArgs(args []string) *Parameters {
 
 	f := Flags{}
-  limit := ""
+	limit := ""
 
 	log.SetFlags(0)
 	log.SetOutput(os.Stdout)
@@ -101,7 +101,7 @@ func ParseArgs(args []string) *Parameters {
 
 	flag.IntVar(&f.workers, "w", 1000, "Defines the max number of routines running at the same time")
 	flag.BoolVar(&printVersion, "v", false, "Prints current mgp version")
-  flag.StringVar(&limit, "lim", "5gb", "File size limit (for example 2kb or 10gb)")
+	flag.StringVar(&limit, "lim", "5gb", "File size limit (for example 2kb or 10gb)")
 	flag.BoolVar(&f.icase, "i", false, "Performs case insensitive matching")
 	flag.BoolVar(&f.raw, "raw", false, "Disable colored output")
 	flag.StringVar(&f.exclude, "exc", "", "Excluded paths (specified as a comma separated list like \"path1,path2\")")
@@ -109,7 +109,7 @@ func ParseArgs(args []string) *Parameters {
 	flag.BoolVar(&f.matchAll, "all", false, "Show every match for a file")
 	flag.BoolVar(&f.showCtx, "ctx", false, "Print match context")
 
-  flag.CommandLine.Parse(args)
+	flag.CommandLine.Parse(args)
 
 	posArgs := flag.Args()
 
@@ -117,14 +117,13 @@ func ParseArgs(args []string) *Parameters {
 		PrintBriefHelpAndExit()
 	}
 
-  lim, err := parseByteLimit(limit)
+	lim, err := parseByteLimit(limit)
 
-  f.limitBytes = lim
+	f.limitBytes = lim
 
-  if err != nil {
-    log.Println("Error parsing byte limit, the option will be ignored")
-  }
-
+	if err != nil {
+		log.Println("Error parsing byte limit, the option will be ignored")
+	}
 
 	return &Parameters{
 		Flags:     f,

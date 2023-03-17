@@ -26,7 +26,8 @@ func setSignalHandlers(app *Finder) {
 }
 
 // Runs mgp from command line interface
-func RunApp(args []string) {
+func main() {
+  args := os.Args[1:]
 	params := ParseArgs(args)
 
 	if _, err := os.Stat(params.startpath); os.IsNotExist(err) {
